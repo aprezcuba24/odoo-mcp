@@ -1,0 +1,140 @@
+# admin-mcp
+
+Servidor [MCP](https://modelcontextprotocol.io/) (Model Context Protocol) en Python para operaciones de administración Odoo. Scaffold arquitectónico basado en [ApkMCP](../ApkMCP), con **FastMCP** y transporte **Streamable HTTP**.
+
+Incluye un ejemplo hola mundo conectado: **service → resource → tools → prompt**.
+
+## Requisitos
+
+- Python 3.11+
+- Para desarrollo con [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector): Node.js **22.7.5+** y **pnpm**
+
+## Instalación
+
+```bash
+cd AdminMCP
+python3 -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -e ".[lambda]"
+```
+
+Con [uv](https://docs.astral.sh/uv/):
+
+```bash
+uv sync --all-extras
+```
+
+## Configuración
+
+Copia `.env.example` a `.env`:
+
+| Variable | Descripción | Default |
+|----------|-------------|---------|
+| `ADMIN_API_TIMEOUT` | Timeout HTTP en segundos | `30` |
+| `MCP_HOST` / `MCP_PORT` / `MCP_PATH` | Bind y ruta MCP | `0.0.0.0:8001/mcp` |
+
+### Autenticación (`shop-key`)
+
+Cada petición HTTP al endpoint MCP debe incluir la cabecera **`shop-key`**: `Bearer` + `base64(BASE_URL|user_token)`.
+
+Generar el valor en local:
+
+```bash
+pnpm shop-key -- http://localhost:8069|99031c76-d288-41ea-866b-ef656f58e497
+# → Bearer aHR0cDovL2xvY2FsaG9zdDo4MDY5fDk5MDMxYzc2L...
+```
+
+El servidor decodifica URL y token, enruta al backend indicado y prepara el cliente httpx para futuras llamadas a la API admin.
+
+## Ejecución
+
+```bash
+python -m app
+# o
+admin-mcp
+```
+
+Desarrollo con Inspector:
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Inspector usa `dev/mcp-inspector.config.json` (puerto **8001**, distinto de ApkMCP en 8000). Configura el header `shop-key` en el Inspector antes de invocar tools/resources.
+
+## Superficie MCP (hola mundo)
+
+| Tipo | Nombre | URI / descripción |
+|------|--------|-------------------|
+| Resource | Hola mundo: mensaje | `admin://hello/message{?name}` |
+| Tool (lectura) | `read_hello_message` | Espejo del resource (ChatGPT) |
+| Tool (acción) | `say_hello` | Saludo personalizado por nombre |
+| Prompt | `hello_assistant` | Guía: leer mensaje → saludar |
+
+## Arquitectura
+
+```
+app/
+├── server/          # FastMCP, lifespan, middleware shop-key, DI, instructions
+├── services/        # Lógica reutilizable (sin decoradores MCP)
+├── resources/       # @mcp.resource  admin://...
+├── tools/           # @mcp.tool acciones
+│   └── tool_resources/  # read_* espejo de resources
+├── prompts/         # @mcp.prompt
+├── utils/           # shop-key codec, excepciones
+└── cli/             # admin-mcp-shop-key
+```
+
+Registro por imports con efecto lateral en `app/server/__init__.py`.
+
+Flujo del ejemplo hola mundo:
+
+1. `ShopKeyMiddleware` decodifica `shop-key` → `ShopContext`
+2. Resource `admin://hello/message` o tool `read_hello_message` → `services/hello.py`
+3. Tool `say_hello(name)` → mismo service con nombre personalizado
+4. Prompt `hello_assistant` guía al agente por el flujo
+
+### Cómo extender
+
+1. Añadir función en `app/services/<dominio>.py`
+2. Exponer `@mcp.resource` en `app/resources/<dominio>.py`
+3. Espejo `read_*` en `app/tools/tool_resources/<dominio>.py`
+4. Tools de acción en `app/tools/<dominio>.py`
+5. Registrar módulos en los `__init__.py` correspondientes
+6. Actualizar `app/server/instructions.py`
+
+## Configuración Cursor MCP
+
+```json
+{
+  "mcpServers": {
+    "admin-mcp": {
+      "url": "http://127.0.0.1:8001/mcp",
+      "headers": {
+        "shop-key": "Bearer <base64(BASE_URL|user_token)>"
+      }
+    }
+  }
+}
+```
+
+## Tests
+
+```bash
+pnpm test
+# o
+pytest
+```
+
+## Despliegue (AWS Lambda)
+
+```bash
+pnpm deploy
+```
+
+Requiere credenciales AWS y `SERVERLESS_ACCESS_KEY`. El workflow `.github/workflows/main.yml` despliega en push a `main`.
+
+## Relación con ApkMCP
+
+AdminMCP replica la arquitectura de ApkMCP (capas, shop-key, Lambda, Inspector) sin la lógica de tienda (catálogo, carrito, order_bridge, OpenAPI generado, DynamoDB).

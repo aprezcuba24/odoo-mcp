@@ -1,0 +1,52 @@
+service: admin-mcp
+frameworkVersion: "4"
+
+provider:
+  name: aws
+  runtime: python3.12
+  timeout: 30
+  memorySize: 512
+  deploymentBucket:
+    name: admin-mcp-serverless-deployments-us-east-1
+  environment:
+    ADMIN_API_TIMEOUT: "30"
+
+functions:
+  mcp:
+    handler: app/lambda_handler.handler
+    url: true
+
+custom:
+  pythonRequirements:
+    useUv: true
+    installer: uv
+    uvOptionalDependencies:
+      - lambda
+    dockerizePip: non-linux
+    slim: true
+    slimPatternsAppendDefaults: false
+    slimPatterns:
+      - "**/*.py[c|o]"
+      - "**/__pycache__*"
+    noDeploy:
+      - cryptography
+      - authlib
+      - joserfc
+      - cffi
+      - pycparser
+      - cyclopts
+      - docutils
+      - keyring
+      - secretstorage
+      - jeepney
+      - jaraco.classes
+      - jaraco.context
+      - jaraco.functools
+      - pyperclip
+      - dnspython
+      - email-validator
+
+package:
+  patterns:
+    - '!./**'
+    - app/**
