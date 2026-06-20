@@ -1,4 +1,4 @@
-"""Unit tests for shop-key HTTP middleware."""
+"""Unit tests for auth-key HTTP middleware."""
 
 from __future__ import annotations
 
@@ -10,28 +10,28 @@ from starlette.responses import PlainTextResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
-from app.server.shop_key_middleware import ShopKeyMiddleware
-from app.utils.shop_key_codec import (
-    SHOP_CONTEXT_STATE_KEY,
-    SHOP_KEY_BEARER_PREFIX,
-    encode_shop_key,
+from app.server.app_key_middleware import AppKeyMiddleware
+from app.utils.app_key_codec import (
+    APP_CONTEXT_STATE_KEY,
+    APP_KEY_BEARER_PREFIX,
+    encode_app_key,
 )
 
 _BASE = "http://localhost:8069"
 _USER_TOKEN = "99031c76-d288-41ea-866b-ef656f58e497"
-_ENCODED = encode_shop_key(_BASE, _USER_TOKEN)
-_B64_ONLY = _ENCODED.removeprefix(SHOP_KEY_BEARER_PREFIX)
+_ENCODED = encode_app_key(_BASE, _USER_TOKEN)
+_B64_ONLY = _ENCODED.removeprefix(APP_KEY_BEARER_PREFIX)
 
 
 async def _read_context(request):
-    ctx = getattr(request.state, SHOP_CONTEXT_STATE_KEY)
+    ctx = getattr(request.state, APP_CONTEXT_STATE_KEY)
     return PlainTextResponse(f"{ctx.base_url}|{ctx.user_token}")
 
 
 def _client() -> TestClient:
     app = Starlette(
         routes=[Route("/mcp", _read_context, methods=["POST"])],
-        middleware=[Middleware(ShopKeyMiddleware)],
+        middleware=[Middleware(AppKeyMiddleware)],
     )
     return TestClient(app)
 
@@ -40,57 +40,57 @@ def test_middleware_rejects_header_and_query_together() -> None:
     with _client() as client:
         response = client.post(
             f"/mcp?key={_B64_ONLY}",
-            headers={"shop-key": _ENCODED},
+            headers={"auth-key": _ENCODED},
         )
 
     assert response.status_code == 400
-    assert "Ambiguous shop-key" in response.json()["error"]
+    assert "Ambiguous auth-key" in response.json()["error"]
 
 
-def test_middleware_rejects_missing_shop_key() -> None:
+def test_middleware_rejects_missing_auth_key() -> None:
     with _client() as client:
         response = client.post("/mcp")
 
     assert response.status_code == 401
-    assert "Missing shop-key" in response.json()["error"]
+    assert "Missing auth-key" in response.json()["error"]
 
 
-def test_middleware_rejects_invalid_shop_key() -> None:
+def test_middleware_rejects_invalid_auth_key() -> None:
     with _client() as client:
-        response = client.post("/mcp", headers={"shop-key": "Bearer not-valid!!!"})
+        response = client.post("/mcp", headers={"auth-key": "Bearer not-valid!!!"})
 
     assert response.status_code == 400
-    assert "Invalid shop-key" in response.json()["error"]
+    assert "Invalid auth-key" in response.json()["error"]
 
 
 def test_middleware_rejects_missing_pipe_in_payload() -> None:
     payload = base64.b64encode(b"https://example.com").decode()
     with _client() as client:
-        response = client.post("/mcp", headers={"shop-key": f"Bearer {payload}"})
+        response = client.post("/mcp", headers={"auth-key": f"Bearer {payload}"})
 
     assert response.status_code == 400
-    assert "Invalid shop-key" in response.json()["error"]
+    assert "Invalid auth-key" in response.json()["error"]
 
 
 def test_middleware_rejects_empty_payload_parts() -> None:
     payload = base64.b64encode(b"|token").decode()
     with _client() as client:
-        response = client.post("/mcp", headers={"shop-key": f"Bearer {payload}"})
+        response = client.post("/mcp", headers={"auth-key": f"Bearer {payload}"})
 
     assert response.status_code == 400
-    assert "Invalid shop-key" in response.json()["error"]
+    assert "Invalid auth-key" in response.json()["error"]
 
     payload = base64.b64encode(b"https://x.com|").decode()
     with _client() as client:
-        response = client.post("/mcp", headers={"shop-key": f"Bearer {payload}"})
+        response = client.post("/mcp", headers={"auth-key": f"Bearer {payload}"})
 
     assert response.status_code == 400
-    assert "Invalid shop-key" in response.json()["error"]
+    assert "Invalid auth-key" in response.json()["error"]
 
 
 def test_middleware_attaches_context_from_header() -> None:
     with _client() as client:
-        response = client.post("/mcp", headers={"shop-key": _ENCODED})
+        response = client.post("/mcp", headers={"auth-key": _ENCODED})
 
     assert response.status_code == 200
     assert response.text == f"{_BASE}|{_USER_TOKEN}"

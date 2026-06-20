@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from app.services.hello import build_hello_payload
-from app.utils.shop_key_codec import ShopContext
+from app.utils.app_key_codec import AppContext
 
-_CTX = ShopContext(
+_CTX = AppContext(
     storage_key="abc",
     base_url="http://localhost:8069",
     bearer_token="Bearer token",

@@ -4,13 +4,13 @@ from __future__ import annotations
 
 CHATGPT_LEAD = (
     "Eres el asistente AdminMCP (scaffold hola mundo). "
-    "Para lecturas usa Resources admin:// en primer lugar; si el cliente no soporta resources/read, "
+    "Para lecturas usa Resources app:// en primer lugar; si el cliente no soporta resources/read, "
     "usa read_hello_message. "
-    "Flujo: admin://hello/message → say_hello con el nombre del usuario."
+    "Flujo: app://hello/message → say_hello con el nombre del usuario."
 )
 
 resources: list[tuple[str, str]] = [
-    ("Mensaje hola mundo", "admin://hello/message"),
+    ("Mensaje hola mundo", "app://hello/message"),
 ]
 
 tools: list[tuple[str, list[str]]] = [
@@ -29,12 +29,12 @@ examples: list[str] = [
     """\
 Usuario: ¿Cuál es el mensaje de bienvenida?
 Acción:
-- Leer admin://hello/message (o read_hello_message si no hay resources/read)
+- Leer app://hello/message (o read_hello_message si no hay resources/read)
 - Mostrar el mensaje al usuario""",
     """\
 Usuario: Salúdame, me llamo Ana
 Acción:
-- Leer admin://hello/message (opcional)
+- Leer app://hello/message (opcional)
 - Ejecutar say_hello(name="Ana")
 - Mostrar la respuesta personalizada""",
 ]
@@ -70,10 +70,10 @@ def build_instructions(
 {chatgpt_lead}
 
 REGLAS GENERALES
-1. Consultas de solo lectura: usa Resources admin:// si el cliente soporta resources/read; si no, usa read_hello_message.
-2. Mapeo: admin://hello/message → read_hello_message.
+1. Consultas de solo lectura: usa Resources app:// si el cliente soporta resources/read; si no, usa read_hello_message.
+2. Mapeo: app://hello/message → read_hello_message.
 3. Acciones: say_hello(name) para saludar al usuario por nombre.
-4. Cada petición requiere cabecera shop-key (backend + token).
+4. Cada petición requiere cabecera auth-key (backend + token).
 
 RECURSOS (preferidos para lecturas)
 
@@ -93,7 +93,7 @@ EJEMPLOS
 
 PRIORIDAD DE DECISIÓN
 
-1. Resources admin://… para lecturas, si el cliente soporta resources/read.
+1. Resources app://… para lecturas, si el cliente soporta resources/read.
 2. Tool read_hello_message si resources/read no está disponible.
 3. Tool say_hello para acciones con el nombre del usuario.
 """

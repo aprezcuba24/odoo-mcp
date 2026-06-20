@@ -7,11 +7,11 @@ from dataclasses import dataclass
 
 import httpx
 
-from app.utils.shop_key_codec import resolve_shop_context
+from app.utils.app_key_codec import resolve_app_context
 
 
 @dataclass(frozen=True, slots=True)
-class AdminClientRef:
+class AppClientRef:
     """Holds an httpx client for the decoded backend without ``__aenter__``."""
 
     client: httpx.AsyncClient
@@ -19,7 +19,7 @@ class AdminClientRef:
 
 
 @dataclass(frozen=True, slots=True)
-class AuthenticatedAdminRef:
+class AuthenticatedAppRef:
     """Per-request httpx client for the decoded backend plus Bearer token."""
 
     client: httpx.AsyncClient
@@ -67,22 +67,22 @@ class AppState:
 app_state = AppState()
 
 
-async def get_admin_api() -> AdminClientRef:
+async def get_app_api() -> AppClientRef:
     registry = app_state.registry
     if registry is None:
         raise RuntimeError("API client not initialized; server lifespan did not start.")
-    ctx = resolve_shop_context()
+    ctx = resolve_app_context()
     client = await registry.get_client(ctx.base_url)
-    return AdminClientRef(client=client, base_url=ctx.base_url)
+    return AppClientRef(client=client, base_url=ctx.base_url)
 
 
-async def get_authenticated_admin_api() -> AuthenticatedAdminRef:
+async def get_authenticated_app_api() -> AuthenticatedAppRef:
     registry = app_state.registry
     if registry is None:
         raise RuntimeError("API client not initialized; server lifespan did not start.")
-    ctx = resolve_shop_context()
+    ctx = resolve_app_context()
     client = await registry.get_client(ctx.base_url)
-    return AuthenticatedAdminRef(
+    return AuthenticatedAppRef(
         client=client,
         base_url=ctx.base_url,
         bearer_token=ctx.bearer_token,

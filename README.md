@@ -33,14 +33,14 @@ Copia `.env.example` a `.env`:
 | `ADMIN_API_TIMEOUT` | Timeout HTTP en segundos | `30` |
 | `MCP_HOST` / `MCP_PORT` / `MCP_PATH` | Bind y ruta MCP | `0.0.0.0:8001/mcp` |
 
-### Autenticación (`shop-key`)
+### Autenticación (`auth-key`)
 
-Cada petición HTTP al endpoint MCP debe incluir la cabecera **`shop-key`**: `Bearer` + `base64(BASE_URL|user_token)`.
+Cada petición HTTP al endpoint MCP debe incluir la cabecera **`auth-key`**: `Bearer` + `base64(BASE_URL|user_token)`.
 
 Generar el valor en local:
 
 ```bash
-pnpm shop-key -- http://localhost:8069|99031c76-d288-41ea-866b-ef656f58e497
+pnpm auth-key -- http://localhost:8069|99031c76-d288-41ea-866b-ef656f58e497
 # → Bearer aHR0cDovL2xvY2FsaG9zdDo4MDY5fDk5MDMxYzc2L...
 ```
 
@@ -61,13 +61,13 @@ pnpm install
 pnpm dev
 ```
 
-Inspector usa `dev/mcp-inspector.config.json` (puerto **8001**, distinto de ApkMCP en 8000). Configura el header `shop-key` en el Inspector antes de invocar tools/resources.
+Inspector usa `dev/mcp-inspector.config.json` (puerto **8001**, distinto de ApkMCP en 8000). Configura el header `auth-key` en el Inspector antes de invocar tools/resources.
 
 ## Superficie MCP (hola mundo)
 
 | Tipo | Nombre | URI / descripción |
 |------|--------|-------------------|
-| Resource | Hola mundo: mensaje | `admin://hello/message{?name}` |
+| Resource | Hola mundo: mensaje | `app://hello/message{?name}` |
 | Tool (lectura) | `read_hello_message` | Espejo del resource (ChatGPT) |
 | Tool (acción) | `say_hello` | Saludo personalizado por nombre |
 | Prompt | `hello_assistant` | Guía: leer mensaje → saludar |
@@ -76,22 +76,22 @@ Inspector usa `dev/mcp-inspector.config.json` (puerto **8001**, distinto de ApkM
 
 ```
 app/
-├── server/          # FastMCP, lifespan, middleware shop-key, DI, instructions
+├── server/          # FastMCP, lifespan, middleware auth-key, DI, instructions
 ├── services/        # Lógica reutilizable (sin decoradores MCP)
-├── resources/       # @mcp.resource  admin://...
+├── resources/       # @mcp.resource  app://...
 ├── tools/           # @mcp.tool acciones
 │   └── tool_resources/  # read_* espejo de resources
 ├── prompts/         # @mcp.prompt
-├── utils/           # shop-key codec, excepciones
-└── cli/             # admin-mcp-shop-key
+├── utils/           # app_key_codec, excepciones
+└── cli/             # admin-mcp-auth-key
 ```
 
 Registro por imports con efecto lateral en `app/server/__init__.py`.
 
 Flujo del ejemplo hola mundo:
 
-1. `ShopKeyMiddleware` decodifica `shop-key` → `ShopContext`
-2. Resource `admin://hello/message` o tool `read_hello_message` → `services/hello.py`
+1. `AppKeyMiddleware` decodifica `auth-key` → `AppContext`
+2. Resource `app://hello/message` o tool `read_hello_message` → `services/hello.py`
 3. Tool `say_hello(name)` → mismo service con nombre personalizado
 4. Prompt `hello_assistant` guía al agente por el flujo
 
@@ -112,7 +112,7 @@ Flujo del ejemplo hola mundo:
     "admin-mcp": {
       "url": "http://127.0.0.1:8001/mcp",
       "headers": {
-        "shop-key": "Bearer <base64(BASE_URL|user_token)>"
+        "auth-key": "Bearer <base64(BASE_URL|user_token)>"
       }
     }
   }
@@ -137,4 +137,4 @@ Requiere credenciales AWS y `SERVERLESS_ACCESS_KEY`. El workflow `.github/workfl
 
 ## Relación con ApkMCP
 
-AdminMCP replica la arquitectura de ApkMCP (capas, shop-key, Lambda, Inspector) sin la lógica de tienda (catálogo, carrito, order_bridge, OpenAPI generado, DynamoDB).
+AdminMCP replica la arquitectura de ApkMCP (capas, auth-key, Lambda, Inspector) sin la lógica de tienda (catálogo, carrito, order_bridge, OpenAPI generado, DynamoDB).

@@ -14,7 +14,7 @@ dependencies = [
 
 [project.scripts]
 admin-mcp = "app.__main__:main"
-admin-mcp-shop-key = "app.cli.shop_key:main"
+admin-mcp-auth-key = "app.cli.auth_key:main"
 
 [project.optional-dependencies]
 lambda = ["mangum>=0.19.0"]

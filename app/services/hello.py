@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.utils.shop_key_codec import ShopContext
+from app.utils.app_key_codec import AppContext
 
 
-def build_hello_payload(ctx: ShopContext, *, name: str | None = None) -> dict[str, Any]:
-    """Build a hello-world payload including backend from shop-key context."""
+def build_hello_payload(ctx: AppContext, *, name: str | None = None) -> dict[str, Any]:
+    """Build a hello-world payload including backend from auth-key context."""
     if name:
         message = f"Hola, {name}!"
     else:

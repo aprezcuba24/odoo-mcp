@@ -1,4 +1,4 @@
-"""Tool de lectura hola mundo — equivalente a Resource admin://hello/message."""
+"""Tool de lectura hola mundo — equivalente a Resource app://hello/message."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from app.tools.tool_resources._common import READ_ONLY
     name="read_hello_message",
     description=(
         "Mensaje de bienvenida hola mundo. Parámetro opcional name personaliza el saludo. "
-        "Equivalente al Resource admin://hello/message."
+        "Equivalente al Resource app://hello/message."
     ),
     annotations=READ_ONLY,
 )

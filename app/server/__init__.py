@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 from .app_state import (
-    AdminClientRef,
-    AuthenticatedAdminRef,
-    get_admin_api,
-    get_authenticated_admin_api,
+    AppClientRef,
+    AuthenticatedAppRef,
+    get_app_api,
+    get_authenticated_app_api,
 )
-from app.utils.exceptions import AmbiguousShopKeyError, InvalidShopKeyError
-from app.utils.shop_key_codec import (
-    SHOP_KEY_HEADER,
-    SHOP_KEY_QUERY_PARAM,
-    ShopContext,
-    resolve_shop_context,
-    resolve_shop_key,
+from app.utils.exceptions import AmbiguousAuthKeyError, InvalidAuthKeyError
+from app.utils.app_key_codec import (
+    APP_KEY_HEADER,
+    APP_KEY_QUERY_PARAM,
+    AppContext,
+    resolve_app_context,
+    resolve_app_key,
 )
 from .server import mcp, run
 
@@ -23,17 +23,17 @@ import app.resources  # noqa: F401  # register resources
 import app.prompts  # noqa: F401  # register prompts
 
 __all__ = [
-    "AdminClientRef",
-    "AmbiguousShopKeyError",
-    "AuthenticatedAdminRef",
-    "InvalidShopKeyError",
-    "SHOP_KEY_HEADER",
-    "SHOP_KEY_QUERY_PARAM",
-    "ShopContext",
-    "get_admin_api",
-    "get_authenticated_admin_api",
-    "resolve_shop_context",
-    "resolve_shop_key",
+    "AppClientRef",
+    "AmbiguousAuthKeyError",
+    "AuthenticatedAppRef",
+    "InvalidAuthKeyError",
+    "APP_KEY_HEADER",
+    "APP_KEY_QUERY_PARAM",
+    "AppContext",
+    "get_app_api",
+    "get_authenticated_app_api",
+    "resolve_app_context",
+    "resolve_app_key",
     "mcp",
     "run",
 ]

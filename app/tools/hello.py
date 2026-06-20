@@ -6,21 +6,21 @@ from typing import Any
 
 from uncalled_for import Depends
 
-from app.server import AuthenticatedAdminRef, get_authenticated_admin_api, mcp
+from app.server import AuthenticatedAppRef, get_authenticated_app_api, mcp
 from app.services.hello import build_hello_payload
-from app.utils.shop_key_codec import resolve_shop_context
+from app.utils.app_key_codec import resolve_app_context
 
 
 @mcp.tool(
     name="say_hello",
     description=(
         "Saluda al usuario por nombre. Devuelve mensaje personalizado y backend "
-        "del shop-key. Usar después de leer admin://hello/message."
+        "del auth-key. Usar después de leer app://hello/message."
     ),
 )
 async def say_hello_tool(
     name: str,
-    _auth: AuthenticatedAdminRef = Depends(get_authenticated_admin_api),
+    _auth: AuthenticatedAppRef = Depends(get_authenticated_app_api),
 ) -> dict[str, Any]:
-    ctx = resolve_shop_context()
+    ctx = resolve_app_context()
     return build_hello_payload(ctx, name=name)
