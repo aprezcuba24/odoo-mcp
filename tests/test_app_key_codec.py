@@ -17,7 +17,7 @@ from app.utils.app_key_codec import (
 
 _TOKEN = "99031c76-d288-41ea-866b-ef656f58e497"
 _BASE = "https://admin.example.com"
-_INVALID_MSG = re.escape("Invalid auth-key: expected base64(BASE_URL|user_token).")
+_INVALID_MSG = re.escape("Invalid auth-key: expected base64(BASE_URL|API_KEY[|database]).")
 
 
 def test_encode_decode_roundtrip() -> None:
@@ -29,6 +29,39 @@ def test_encode_decode_roundtrip() -> None:
     assert ctx.storage_key == b64
     assert ctx.base_url == _BASE
     assert ctx.bearer_token == f"Bearer {_TOKEN}"
+    assert ctx.database is None
+
+
+def test_encode_decode_roundtrip_with_database() -> None:
+    raw = encode_app_key(_BASE, _TOKEN, "mi_db")
+    ctx = app_context_from_encoded(raw)
+    assert ctx.base_url == _BASE
+    assert ctx.bearer_token == f"Bearer {_TOKEN}"
+    assert ctx.database == "mi_db"
+
+
+def test_encode_from_credentials_with_database() -> None:
+    raw = encode_app_key_from_credentials(f"{_BASE}|{_TOKEN}|mi_db")
+    ctx = app_context_from_encoded(raw)
+    assert ctx.database == "mi_db"
+
+
+def test_encode_without_database_omits_third_segment() -> None:
+    raw = encode_app_key(_BASE, _TOKEN)
+    decoded = base64.b64decode(raw.removeprefix(APP_KEY_BEARER_PREFIX)).decode()
+    assert decoded == f"{_BASE}|{_TOKEN}"
+    assert decoded.count("|") == 1
+
+
+def test_decode_two_segments_has_no_database() -> None:
+    ctx = app_context_from_encoded(encode_app_key(_BASE, _TOKEN))
+    assert ctx.database is None
+
+
+def test_decode_empty_database_segment_is_none() -> None:
+    payload = base64.b64encode(f"{_BASE}|{_TOKEN}|".encode()).decode()
+    ctx = app_context_from_encoded(f"Bearer {payload}")
+    assert ctx.database is None
 
 
 def test_encode_from_credentials() -> None:

@@ -17,11 +17,12 @@ class MissingAuthKeyError(AppMcpError):
 
 
 class InvalidAuthKeyError(MissingAuthKeyError):
-    """auth-key present but not valid base64(BASE_URL|user_token)."""
+    """auth-key present but not valid base64(BASE_URL|API_KEY[|database])."""
 
     def __init__(self, message: str | None = None, *args: object) -> None:
         super().__init__(
-            message or "Invalid auth-key: expected base64(BASE_URL|user_token).",
+            message
+            or "Invalid auth-key: expected base64(BASE_URL|API_KEY[|database]).",
             *args,
         )
 
@@ -49,4 +50,16 @@ class AppApiError(AppMcpError):
 
 
 class UnauthorizedError(AppApiError):
-    """401 — invalid or missing Bearer token."""
+    """401 — invalid or missing API key."""
+
+
+class ForbiddenError(AppApiError):
+    """403 — insufficient permissions for the bot user."""
+
+
+class NotFoundError(AppApiError):
+    """404 — model/method not found or private method."""
+
+
+class ValidationApiError(AppApiError):
+    """422 — invalid ORM arguments."""

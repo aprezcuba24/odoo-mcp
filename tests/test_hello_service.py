@@ -10,6 +10,7 @@ _CTX = AppContext(
     base_url="http://localhost:8069",
     bearer_token="Bearer token",
     user_token="token",
+    database=None,
 )
 
 

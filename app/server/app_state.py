@@ -3,28 +3,11 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
 
 import httpx
 
+from app.clients.odoo_json2 import OdooJson2Client, raw_api_key
 from app.utils.app_key_codec import resolve_app_context
-
-
-@dataclass(frozen=True, slots=True)
-class AppClientRef:
-    """Holds an httpx client for the decoded backend without ``__aenter__``."""
-
-    client: httpx.AsyncClient
-    base_url: str
-
-
-@dataclass(frozen=True, slots=True)
-class AuthenticatedAppRef:
-    """Per-request httpx client for the decoded backend plus Bearer token."""
-
-    client: httpx.AsyncClient
-    base_url: str
-    bearer_token: str
 
 
 class ClientRegistry:
@@ -67,23 +50,17 @@ class AppState:
 app_state = AppState()
 
 
-async def get_app_api() -> AppClientRef:
+async def get_odoo_client(*, lang: str = "es_ES") -> OdooJson2Client:
+    """Build an Odoo JSON-2 client from the current request auth-key context."""
     registry = app_state.registry
     if registry is None:
         raise RuntimeError("API client not initialized; server lifespan did not start.")
     ctx = resolve_app_context()
     client = await registry.get_client(ctx.base_url)
-    return AppClientRef(client=client, base_url=ctx.base_url)
-
-
-async def get_authenticated_app_api() -> AuthenticatedAppRef:
-    registry = app_state.registry
-    if registry is None:
-        raise RuntimeError("API client not initialized; server lifespan did not start.")
-    ctx = resolve_app_context()
-    client = await registry.get_client(ctx.base_url)
-    return AuthenticatedAppRef(
+    return OdooJson2Client(
         client=client,
         base_url=ctx.base_url,
-        bearer_token=ctx.bearer_token,
+        api_key=raw_api_key(ctx.user_token),
+        database=ctx.database,
+        lang=lang,
     )

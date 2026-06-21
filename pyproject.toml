@@ -21,6 +21,7 @@ lambda = ["mangum>=0.19.0"]
 
 [dependency-groups]
 dev = [
+    "httpx2>=2.0.0",
     "pytest>=9.0.3",
 ]
 

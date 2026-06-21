@@ -35,16 +35,23 @@ Copia `.env.example` a `.env`:
 
 ### Autenticación (`auth-key`)
 
-Cada petición HTTP al endpoint MCP debe incluir la cabecera **`auth-key`**: `Bearer` + `base64(BASE_URL|user_token)`.
+Cada petición HTTP al endpoint MCP debe incluir la cabecera **`auth-key`**: `Bearer` + `base64(BASE_URL|API_KEY[|database])`.
+
+- `BASE_URL`: URL HTTPS del servidor Odoo (sin barra final), p. ej. `https://mi-empresa.onrender.com`
+- `API_KEY`: clave API de un usuario bot de Odoo (scope rpc)
+- `database` (opcional): nombre de la base de datos cuando el servidor tiene varias (`X-Odoo-Database`)
 
 Generar el valor en local:
 
 ```bash
-pnpm auth-key -- http://localhost:8069|99031c76-d288-41ea-866b-ef656f58e497
-# → Bearer aHR0cDovL2xvY2FsaG9zdDo4MDY5fDk5MDMxYzc2L...
+# Sin base de datos explícita
+pnpm auth-key -- https://mi-empresa.onrender.com|99031c76-d288-41ea-866b-ef656f58e497
+
+# Con base de datos (multi-DB)
+pnpm auth-key -- https://mi-empresa.onrender.com|99031c76-d288-41ea-866b-ef656f58e497|mi_db
 ```
 
-El servidor decodifica URL y token, enruta al backend indicado y prepara el cliente httpx para futuras llamadas a la API admin.
+El servidor decodifica URL, API key y database opcional, y prepara el cliente httpx para llamadas JSON-2 a Odoo (`POST /json/2/{modelo}/{metodo}`).
 
 ## Ejecución
 
@@ -77,6 +84,7 @@ Inspector usa `dev/mcp-inspector.config.json` (puerto **8001**, distinto de ApkM
 ```
 app/
 ├── server/          # FastMCP, lifespan, middleware auth-key, DI, instructions
+├── clients/         # OdooJson2Client (JSON-2 API oficial)
 ├── services/        # Lógica reutilizable (sin decoradores MCP)
 ├── resources/       # @mcp.resource  app://...
 ├── tools/           # @mcp.tool acciones
@@ -112,7 +120,7 @@ Flujo del ejemplo hola mundo:
     "admin-mcp": {
       "url": "http://127.0.0.1:8001/mcp",
       "headers": {
-        "auth-key": "Bearer <base64(BASE_URL|user_token)>"
+        "auth-key": "Bearer <base64(BASE_URL|API_KEY[|database])>"
       }
     }
   }
