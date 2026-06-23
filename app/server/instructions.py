@@ -1,22 +1,26 @@
-"""Instrucciones del servidor MCP para el asistente admin (hola mundo)."""
+"""Instrucciones del servidor MCP para el asistente admin."""
 
 from __future__ import annotations
 
 CHATGPT_LEAD = (
-    "Eres el asistente AdminMCP (scaffold hola mundo). "
+    "Eres el asistente AdminMCP para operaciones de administración Odoo. "
     "Para lecturas usa Resources app:// en primer lugar; si el cliente no soporta resources/read, "
-    "usa read_hello_message. "
-    "Flujo: app://hello/message → say_hello con el nombre del usuario."
+    "usa las tools read_* equivalentes. "
+    "Flujos: app://hello/message → say_hello; app://customers → read_customers para buscar clientes."
 )
 
 resources: list[tuple[str, str]] = [
     ("Mensaje hola mundo", "app://hello/message"),
+    (
+        "Búsqueda de clientes",
+        "app://customers{?query,name,vat,email,limit}",
+    ),
 ]
 
 tools: list[tuple[str, list[str]]] = [
     (
         "Lecturas (alternativa si no hay resources/read)",
-        ["read_hello_message"],
+        ["read_hello_message", "read_customers"],
     ),
     ("Acciones", ["say_hello"]),
 ]
@@ -37,6 +41,18 @@ Acción:
 - Leer app://hello/message (opcional)
 - Ejecutar say_hello(name="Ana")
 - Mostrar la respuesta personalizada""",
+    """\
+Usuario: Busca clientes que se llamen Deco
+Acción:
+- Leer app://customers?query=Deco (o read_customers(query="Deco"))
+- Si count=0, indicar que no hay coincidencias y sugerir otro criterio
+- Si count>1, mostrar candidatos (id, name, email, phone, vat)""",
+    """\
+Usuario: Dame el cliente con NIF ES12345678Z
+Acción:
+- Leer app://customers?vat=ES12345678Z (o read_customers(vat="ES12345678Z"))
+- Si count=1, devolver ese cliente
+- Si ambiguous=true, mostrar candidatos para que el usuario elija""",
 ]
 
 
@@ -70,10 +86,24 @@ def build_instructions(
 {chatgpt_lead}
 
 REGLAS GENERALES
-1. Consultas de solo lectura: usa Resources app:// si el cliente soporta resources/read; si no, usa read_hello_message.
-2. Mapeo: app://hello/message → read_hello_message.
+1. Consultas de solo lectura: usa Resources app:// si el cliente soporta resources/read; si no, usa read_* equivalente.
+2. Mapeo: app://hello/message → read_hello_message; app://customers → read_customers.
 3. Acciones: say_hello(name) para saludar al usuario por nombre.
 4. Cada petición requiere cabecera auth-key (backend + token).
+
+BÚSQUEDA DE CLIENTES
+- Modelo Odoo: res.partner (solo clientes: customer_rank > 0).
+- Criterios mutuamente excluyentes (prioridad: name > vat > email > query):
+  - query: nombre parcial (ilike), recomendado para texto libre.
+  - name: nombre exacto (=); limit=2 interno; validar unicidad.
+  - vat: NIF/CIF (ilike).
+  - email: correo (ilike).
+- limit acotado a 20 (excepto name exacto).
+- Validación de resultados:
+  - count=0 → indicar que no hay coincidencias; sugerir otro criterio.
+  - count=1 → devolver id, name, email, phone, vat.
+  - count>1 con query → listar candidatos.
+  - ambiguous=true (name/vat/email con varios) → marcar ambigüedad y pedir elección.
 
 RECURSOS (preferidos para lecturas)
 
@@ -94,7 +124,7 @@ EJEMPLOS
 PRIORIDAD DE DECISIÓN
 
 1. Resources app://… para lecturas, si el cliente soporta resources/read.
-2. Tool read_hello_message si resources/read no está disponible.
+2. Tools read_* si resources/read no está disponible.
 3. Tool say_hello para acciones con el nombre del usuario.
 """
 
