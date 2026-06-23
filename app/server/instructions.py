@@ -6,11 +6,10 @@ CHATGPT_LEAD = (
     "Eres el asistente AdminMCP para operaciones de administración Odoo. "
     "Para lecturas usa Resources app:// en primer lugar; si el cliente no soporta resources/read, "
     "usa las tools read_* equivalentes. "
-    "Flujos: app://hello/message → say_hello; app://customers → read_customers para buscar clientes."
+    "Flujo: app://customers → read_customers para buscar clientes."
 )
 
 resources: list[tuple[str, str]] = [
-    ("Mensaje hola mundo", "app://hello/message"),
     (
         "Búsqueda de clientes",
         "app://customers{?query,name,vat,email,limit}",
@@ -20,27 +19,13 @@ resources: list[tuple[str, str]] = [
 tools: list[tuple[str, list[str]]] = [
     (
         "Lecturas (alternativa si no hay resources/read)",
-        ["read_hello_message", "read_customers"],
+        ["read_customers"],
     ),
-    ("Acciones", ["say_hello"]),
 ]
 
-prompts: list[tuple[str, str]] = [
-    ("hello_assistant", "flujo guiado — leer mensaje y saludar al usuario"),
-]
+prompts: list[tuple[str, str]] = []
 
 examples: list[str] = [
-    """\
-Usuario: ¿Cuál es el mensaje de bienvenida?
-Acción:
-- Leer app://hello/message (o read_hello_message si no hay resources/read)
-- Mostrar el mensaje al usuario""",
-    """\
-Usuario: Salúdame, me llamo Ana
-Acción:
-- Leer app://hello/message (opcional)
-- Ejecutar say_hello(name="Ana")
-- Mostrar la respuesta personalizada""",
     """\
 Usuario: Busca clientes que se llamen Deco
 Acción:
@@ -82,14 +67,22 @@ def build_instructions(
     prompts: list[tuple[str, str]],
     examples: list[str],
 ) -> str:
+    prompts_section = ""
+    if prompts:
+        prompts_section = f"""\
+PROMPTS DISPONIBLES
+
+{_format_labeled_entries(prompts, style="bullet")}
+
+"""
+
     return f"""\
 {chatgpt_lead}
 
 REGLAS GENERALES
 1. Consultas de solo lectura: usa Resources app:// si el cliente soporta resources/read; si no, usa read_* equivalente.
-2. Mapeo: app://hello/message → read_hello_message; app://customers → read_customers.
-3. Acciones: say_hello(name) para saludar al usuario por nombre.
-4. Cada petición requiere cabecera auth-key (backend + token).
+2. Mapeo: app://customers → read_customers.
+3. Cada petición requiere cabecera auth-key (backend + token).
 
 BÚSQUEDA DE CLIENTES
 - Modelo Odoo: res.partner (solo clientes: customer_rank > 0).
@@ -112,11 +105,7 @@ TOOLS DISPONIBLES
 
 {_format_tools(tools)}
 
-PROMPTS DISPONIBLES
-
-{_format_labeled_entries(prompts, style="bullet")}
-
-EJEMPLOS
+{prompts_section}EJEMPLOS
 
 {"\n\n".join(examples)}
 
@@ -124,7 +113,6 @@ PRIORIDAD DE DECISIÓN
 
 1. Resources app://… para lecturas, si el cliente soporta resources/read.
 2. Tools read_* si resources/read no está disponible.
-3. Tool say_hello para acciones con el nombre del usuario.
 """
 
 

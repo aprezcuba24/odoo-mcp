@@ -2,7 +2,7 @@
 
 Servidor [MCP](https://modelcontextprotocol.io/) (Model Context Protocol) en Python para operaciones de administración Odoo. Scaffold arquitectónico basado en [ApkMCP](../ApkMCP), con **FastMCP** y transporte **Streamable HTTP**.
 
-Incluye un ejemplo hola mundo conectado: **service → resource → tools → prompt**.
+Incluye búsqueda de clientes conectada: **service → resource → tool**.
 
 ## Requisitos
 
@@ -70,14 +70,12 @@ pnpm dev
 
 Inspector usa `dev/mcp-inspector.config.json` (puerto **8001**, distinto de ApkMCP en 8000). Configura el header `auth-key` en el Inspector antes de invocar tools/resources.
 
-## Superficie MCP (hola mundo)
+## Superficie MCP
 
 | Tipo | Nombre | URI / descripción |
 |------|--------|-------------------|
-| Resource | Hola mundo: mensaje | `app://hello/message{?name}` |
-| Tool (lectura) | `read_hello_message` | Espejo del resource (ChatGPT) |
-| Tool (acción) | `say_hello` | Saludo personalizado por nombre |
-| Prompt | `hello_assistant` | Guía: leer mensaje → saludar |
+| Resource | Búsqueda de clientes | `app://customers{?query,name,vat,email,limit}` |
+| Tool (lectura) | `read_customers` | Espejo del resource (ChatGPT) |
 
 ## Arquitectura
 
@@ -96,12 +94,10 @@ app/
 
 Registro por imports con efecto lateral en `app/server/__init__.py`.
 
-Flujo del ejemplo hola mundo:
+Flujo de búsqueda de clientes:
 
 1. `AppKeyMiddleware` decodifica `auth-key` → `AppContext`
-2. Resource `app://hello/message` o tool `read_hello_message` → `services/hello.py`
-3. Tool `say_hello(name)` → mismo service con nombre personalizado
-4. Prompt `hello_assistant` guía al agente por el flujo
+2. Resource `app://customers` o tool `read_customers` → `services/customers.py`
 
 ### Cómo extender
 
