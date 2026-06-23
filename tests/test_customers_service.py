@@ -8,8 +8,7 @@ from unittest.mock import AsyncMock
 from app.services.customers import (
     FIELDS,
     CustomerSearchDomain,
-    _effective_limit,
-    _normalize_partner,
+    PartnerResponse,
     search_customers,
 )
 
@@ -41,14 +40,8 @@ def test_build_domain_modes() -> None:
     ]
 
 
-def test_effective_limit() -> None:
-    assert _effective_limit("name", 20) == 2
-    assert _effective_limit("query", 50) == 20
-    assert _effective_limit("query", 5) == 5
-
-
 def test_normalize_partner_false_to_none() -> None:
-    normalized = _normalize_partner(
+    normalized = PartnerResponse().render(
         {
             "id": 1,
             "name": "Acme",
@@ -94,13 +87,12 @@ def test_search_customers_query_calls_odoo() -> None:
             limit=5,
         )
         assert result["count"] == 1
-        assert result["ambiguous"] is False
         assert result["customers"][0]["name"] == "Deco Addict"
 
     asyncio.run(run())
 
 
-def test_search_customers_exact_name_ambiguous() -> None:
+def test_search_customers_exact_name_multiple_results() -> None:
     async def run() -> None:
         odoo = AsyncMock()
         odoo.call.return_value = [
@@ -113,10 +105,9 @@ def test_search_customers_exact_name_ambiguous() -> None:
             "search_read",
             domain=[["name", "=", "Acme"], ["customer_rank", ">", 0]],
             fields=FIELDS,
-            limit=2,
+            limit=20,
         )
         assert result["count"] == 2
-        assert result["ambiguous"] is True
         assert result["search"] == {"mode": "name", "value": "Acme"}
 
     asyncio.run(run())

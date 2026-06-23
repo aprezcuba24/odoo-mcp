@@ -52,7 +52,7 @@ Usuario: Dame el cliente con NIF ES12345678Z
 Acción:
 - Leer app://customers?vat=ES12345678Z (o read_customers(vat="ES12345678Z"))
 - Si count=1, devolver ese cliente
-- Si ambiguous=true, mostrar candidatos para que el usuario elija""",
+- Si count>1, mostrar candidatos (id, name, email, phone, vat)""",
 ]
 
 
@@ -95,15 +95,14 @@ BÚSQUEDA DE CLIENTES
 - Modelo Odoo: res.partner (solo clientes: customer_rank > 0).
 - Criterios mutuamente excluyentes (prioridad: name > vat > email > query):
   - query: nombre parcial (ilike), recomendado para texto libre.
-  - name: nombre exacto (=); limit=2 interno; validar unicidad.
+  - name: nombre exacto (=).
   - vat: NIF/CIF (ilike).
   - email: correo (ilike).
-- limit acotado a 20 (excepto name exacto).
+- limit acotado a 20.
 - Validación de resultados:
   - count=0 → indicar que no hay coincidencias; sugerir otro criterio.
   - count=1 → devolver id, name, email, phone, vat.
-  - count>1 con query → listar candidatos.
-  - ambiguous=true (name/vat/email con varios) → marcar ambigüedad y pedir elección.
+  - count>1 → listar candidatos.
 
 RECURSOS (preferidos para lecturas)
 

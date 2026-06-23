@@ -18,7 +18,7 @@ from app.services.customers import search_customers
         "Busca clientes Odoo (res.partner con customer_rank > 0). "
         "Criterios mutuamente excluyentes (prioridad: name > vat > email > query): "
         "query = nombre parcial (ilike), name = nombre exacto, vat = NIF/CIF, email = correo. "
-        "limit acotado a 20 (name exacto usa limit=2 para validar unicidad)."
+        "limit acotado a 20."
     ),
     mime_type="application/json",
 )
