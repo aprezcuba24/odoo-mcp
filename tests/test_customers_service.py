@@ -7,36 +7,35 @@ from unittest.mock import AsyncMock
 
 from app.services.customers import (
     FIELDS,
-    _build_domain,
+    CustomerSearchDomain,
     _effective_limit,
     _normalize_partner,
-    _resolve_search_mode,
     search_customers,
 )
 
 
 def test_resolve_search_mode_priority() -> None:
-    assert _resolve_search_mode(query="a", name="b", vat="c", email="d") == ("name", "b")
-    assert _resolve_search_mode(query="a", name=None, vat="c", email="d") == ("vat", "c")
-    assert _resolve_search_mode(query="a", name=None, vat=None, email="d") == ("email", "d")
-    assert _resolve_search_mode(query="a", name=None, vat=None, email=None) == ("query", "a")
-    assert _resolve_search_mode(query=None, name=None, vat=None, email=None) is None
+    assert CustomerSearchDomain(query="a", name="b", vat="c", email="d").resolve_criterion() == ("name", "b")
+    assert CustomerSearchDomain(query="a", name=None, vat="c", email="d").resolve_criterion() == ("vat", "c")
+    assert CustomerSearchDomain(query="a", name=None, vat=None, email="d").resolve_criterion() == ("email", "d")
+    assert CustomerSearchDomain(query="a", name=None, vat=None, email=None).resolve_criterion() == ("query", "a")
+    assert CustomerSearchDomain(query=None, name=None, vat=None, email=None).resolve_criterion() is None
 
 
 def test_build_domain_modes() -> None:
-    assert _build_domain("query", "Deco") == [
+    assert CustomerSearchDomain(query="Deco").build_domain() == [
         ["name", "ilike", "Deco"],
         ["customer_rank", ">", 0],
     ]
-    assert _build_domain("name", "Acme") == [
+    assert CustomerSearchDomain(name="Acme").build_domain() == [
         ["name", "=", "Acme"],
         ["customer_rank", ">", 0],
     ]
-    assert _build_domain("vat", "ES123") == [
+    assert CustomerSearchDomain(vat="ES123").build_domain() == [
         ["vat", "ilike", "ES123"],
         ["customer_rank", ">", 0],
     ]
-    assert _build_domain("email", "a@b.com") == [
+    assert CustomerSearchDomain(email="a@b.com").build_domain() == [
         ["email", "ilike", "a@b.com"],
         ["customer_rank", ">", 0],
     ]

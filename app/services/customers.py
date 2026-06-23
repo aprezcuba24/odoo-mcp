@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from app.clients.odoo_json2 import OdooJson2Client
+from app.utils.odoo_domain import OdooDomainBuilder, OdooOperator
 
 CUSTOMER_FILTER: list[Any] = ["customer_rank", ">", 0]
 FIELDS = ["id", "name", "email", "phone", "vat"]
@@ -14,34 +15,15 @@ SearchMode = Literal["name", "vat", "email", "query"]
 IDENTIFIER_MODES: frozenset[SearchMode] = frozenset({"name", "vat", "email"})
 
 
-def _resolve_search_mode(
-    *,
-    query: str | None,
-    name: str | None,
-    vat: str | None,
-    email: str | None,
-) -> tuple[SearchMode, str] | None:
-    if name:
-        return "name", name
-    if vat:
-        return "vat", vat
-    if email:
-        return "email", email
-    if query:
-        return "query", query
-    return None
+class CustomerSearchDomain(OdooDomainBuilder):
+    name = OdooOperator.EQ
+    vat = OdooOperator.ILIKE
+    email = OdooOperator.ILIKE
+    query = OdooOperator.ILIKE
 
-
-def _build_domain(mode: SearchMode, value: str) -> list[list[Any]]:
-    if mode == "name":
-        criterion: list[Any] = ["name", "=", value]
-    elif mode == "vat":
-        criterion = ["vat", "ilike", value]
-    elif mode == "email":
-        criterion = ["email", "ilike", value]
-    else:
-        criterion = ["name", "ilike", value]
-    return [criterion, CUSTOMER_FILTER]
+    priority = ("name", "vat", "email", "query")
+    odoo_fields = {"query": "name"}
+    base_filters = [CUSTOMER_FILTER]
 
 
 def _effective_limit(mode: SearchMode, limit: int) -> int:
@@ -86,14 +68,15 @@ async def search_customers(
     limit: int = 20,
 ) -> dict[str, Any]:
     """Search customers via ``res.partner.search_read`` (customers only)."""
-    resolved = _resolve_search_mode(query=query, name=name, vat=vat, email=email)
+    builder = CustomerSearchDomain(query=query, name=name, vat=vat, email=email)
+    resolved = builder.resolve_criterion()
     if resolved is None:
         return _empty_response(
             message="Indica al menos un criterio: query, name, vat o email.",
         )
 
     mode, value = resolved
-    domain = _build_domain(mode, value)
+    domain = builder.build_domain()
     effective_limit = _effective_limit(mode, limit)
 
     partners = await odoo.call(
