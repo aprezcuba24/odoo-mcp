@@ -15,7 +15,8 @@ from app.tools.tool_resources._common import READ_ONLY
 @mcp.tool(
     name="read_customers",
     description=(
-        "Busca clientes Odoo (res.partner con customer_rank > 0). "
+        "Lista o busca clientes Odoo (res.partner con customer_rank > 0). "
+        "Sin criterios devuelve hasta limit clientes. "
         "Criterios: query (nombre parcial), name (exacto), vat (NIF/CIF), email. "
         "Equivalente al Resource app://customers."
     ),

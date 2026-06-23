@@ -48,12 +48,12 @@ async def search_customers(
     builder = CustomerSearchDomain(query=query, name=name, vat=vat, email=email)
     resolved = builder.resolve_criterion()
     if resolved is None:
-        return _customer_list.empty(
-            message="Indica al menos un criterio: query, name, vat o email.",
-        )
-
-    mode, value = resolved
-    domain = builder.build_domain()
+        domain = [CUSTOMER_FILTER]
+        search_meta = None
+    else:
+        mode, value = resolved
+        domain = builder.build_domain()
+        search_meta = {"mode": mode, "value": value}
 
     partners = await odoo.call(
         "res.partner",
@@ -65,10 +65,13 @@ async def search_customers(
 
     message: str | None = None
     if not partners:
-        message = "No hay clientes que coincidan con el criterio indicado."
+        if resolved is None:
+            message = "No hay clientes registrados."
+        else:
+            message = "No hay clientes que coincidan con el criterio indicado."
 
     return _customer_list.build(
         partners,
-        search={"mode": mode, "value": value},
+        search=search_meta,
         message=message,
     )

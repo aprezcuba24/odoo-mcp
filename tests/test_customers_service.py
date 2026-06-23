@@ -62,12 +62,21 @@ def test_normalize_partner_false_to_none() -> None:
 def test_search_customers_without_criteria() -> None:
     async def run() -> None:
         odoo = AsyncMock()
+        odoo.call.return_value = [
+            {"id": 1, "name": "Acme", "email": False, "phone": False, "vat": False},
+            {"id": 2, "name": "Beta", "email": False, "phone": False, "vat": False},
+        ]
         result = await search_customers(odoo)
-        assert result["count"] == 0
-        assert result["customers"] == []
+        odoo.call.assert_awaited_once_with(
+            "res.partner",
+            "search_read",
+            domain=[["customer_rank", ">", 0]],
+            fields=FIELDS,
+            limit=20,
+        )
+        assert result["count"] == 2
         assert result["search"] is None
-        assert "criterio" in (result["message"] or "").lower()
-        odoo.call.assert_not_called()
+        assert result["message"] is None
 
     asyncio.run(run())
 

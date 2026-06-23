@@ -11,6 +11,40 @@ from app.server import get_odoo_client, mcp
 from app.services.customers import search_customers
 
 
+async def read_customers(
+    odoo: OdooJson2Client,
+    *,
+    query: str | None = None,
+    name: str | None = None,
+    vat: str | None = None,
+    email: str | None = None,
+    limit: int = 20,
+) -> dict[str, Any]:
+    return await search_customers(
+        odoo,
+        query=query,
+        name=name,
+        vat=vat,
+        email=email,
+        limit=limit,
+    )
+
+
+@mcp.resource(
+    uri="app://customers",
+    name="Clientes: listado",
+    description=(
+        "Lista clientes Odoo (res.partner con customer_rank > 0) sin filtros. "
+        "limit acotado a 20."
+    ),
+    mime_type="application/json",
+)
+async def customers_list_resource(
+    _odoo: OdooJson2Client = Depends(get_odoo_client),
+) -> dict[str, Any]:
+    return await read_customers(_odoo)
+
+
 @mcp.resource(
     uri="app://customers{?query,name,vat,email,limit}",
     name="Clientes: búsqueda",
@@ -30,7 +64,7 @@ async def customers_resource(
     limit: int = 20,
     _odoo: OdooJson2Client = Depends(get_odoo_client),
 ) -> dict[str, Any]:
-    return await search_customers(
+    return await read_customers(
         _odoo,
         query=query,
         name=name,

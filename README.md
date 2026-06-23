@@ -74,8 +74,10 @@ Inspector usa `dev/mcp-inspector.config.json` (puerto **8001**, distinto de ApkM
 
 | Tipo | Nombre | URI / descripción |
 |------|--------|-------------------|
+| Resource | Listado de clientes | `app://customers` |
 | Resource | Búsqueda de clientes | `app://customers{?query,name,vat,email,limit}` |
-| Tool (lectura) | `read_customers` | Espejo del resource (ChatGPT) |
+| Tool (lectura) | `read_customers` | Espejo de los resources (ChatGPT) |
+| Prompt | `admin_assistant` | Flujo guiado de listado y búsqueda |
 
 ## Arquitectura
 

@@ -6,10 +6,14 @@ CHATGPT_LEAD = (
     "Eres el asistente AdminMCP para operaciones de administración Odoo. "
     "Para lecturas usa Resources app:// en primer lugar; si el cliente no soporta resources/read, "
     "usa las tools read_* equivalentes. "
-    "Flujo: app://customers → read_customers para buscar clientes."
+    "Flujo: app://customers (listado) o app://customers?query=... (búsqueda) → read_customers."
 )
 
 resources: list[tuple[str, str]] = [
+    (
+        "Listado de clientes",
+        "app://customers",
+    ),
     (
         "Búsqueda de clientes",
         "app://customers{?query,name,vat,email,limit}",
@@ -23,9 +27,16 @@ tools: list[tuple[str, list[str]]] = [
     ),
 ]
 
-prompts: list[tuple[str, str]] = []
+prompts: list[tuple[str, str]] = [
+    ("admin_assistant", "flujo guiado — listado y búsqueda de clientes Odoo"),
+]
 
 examples: list[str] = [
+    """\
+Usuario: Dame todos los clientes
+Acción:
+- Leer app://customers (o read_customers())
+- Listar candidatos (id, name, email, phone, vat) hasta limit=20""",
     """\
 Usuario: Busca clientes que se llamen Deco
 Acción:
@@ -84,8 +95,9 @@ REGLAS GENERALES
 2. Mapeo: app://customers → read_customers.
 3. Cada petición requiere cabecera auth-key (backend + token).
 
-BÚSQUEDA DE CLIENTES
+CLIENTES
 - Modelo Odoo: res.partner (solo clientes: customer_rank > 0).
+- Sin criterios: app://customers o read_customers() lista hasta limit clientes.
 - Criterios mutuamente excluyentes (prioridad: name > vat > email > query):
   - query: nombre parcial (ilike), recomendado para texto libre.
   - name: nombre exacto (=).
