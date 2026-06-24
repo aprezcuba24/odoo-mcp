@@ -17,22 +17,18 @@ from app.tools.tool_resources._common import READ_ONLY
     description=(
         "Lista o busca clientes Odoo (res.partner con customer_rank > 0). "
         "Sin criterios devuelve hasta limit clientes. "
-        "Criterios combinables en OR: name (exacto), vat (NIF/CIF), email. "
+        "query = texto libre en nombre y teléfono (OR, ilike). "
         "Equivalente al Resource app://customers."
     ),
     annotations=READ_ONLY,
 )
 async def read_customers_tool(
-    name: str | None = None,
-    vat: str | None = None,
-    email: str | None = None,
+    query: str | None = None,
     limit: int = 20,
     _odoo: OdooJson2Client = Depends(get_odoo_client),
 ) -> dict[str, Any]:
     return await search_customers(
         _odoo,
-        name=name,
-        vat=vat,
-        email=email,
+        query=query,
         limit=limit,
     )

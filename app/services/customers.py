@@ -15,19 +15,15 @@ class CustomerSearchDomain(OdooDomainBuilder):
     base_filters = ["|", ["customer_rank", OdooOperator.GT, 0], ["order_bridge_registered", OdooOperator.EQ, True]]
     query = [
         "|",
-        "|",
-        ["name", OdooOperator.EQ],
-        ["vat", OdooOperator.ILIKE],
-        ["email", OdooOperator.ILIKE],
+        ["name", OdooOperator.ILIKE],
+        ["phone", OdooOperator.ILIKE],
     ]
 
 
 class PartnerResponse(ObjectResponse):
     id = Normalizer.RAW
     name = Normalizer.DEFAULT_EMPTY
-    email = Normalizer.OPTIONAL
     phone = Normalizer.OPTIONAL
-    vat = Normalizer.OPTIONAL
 
 
 _customer_list = ListResponse(PartnerResponse(), items_key="customers")
@@ -36,27 +32,24 @@ _customer_list = ListResponse(PartnerResponse(), items_key="customers")
 async def search_customers(
     odoo: OdooJson2Client,
     *,
-    name: str | None = None,
-    vat: str | None = None,
-    email: str | None = None,
+    query: str | None = None,
     limit: int = 20,
 ) -> dict[str, Any]:
     """Search via ``res.partner.search_read``."""
-    builder = CustomerSearchDomain(name=name, vat=vat, email=email)
+    builder = CustomerSearchDomain(name=query, phone=query)
     domain = builder.build_domain()
-    has_criteria = any(value for value in (name, vat, email))
 
     partners = await odoo.call(
         "res.partner",
         "search_read",
         domain=domain,
-        fields=["id", "name", "email", "phone", "vat"],
+        fields=["id", "name", "phone"],
         limit=min(limit, MAX_LIMIT),
     )
 
     message: str | None = None
     if not partners:
-        if not has_criteria:
+        if not query:
             message = "No hay contactos registrados."
         else:
             message = "No hay clientes que coincidan con el criterio indicado."

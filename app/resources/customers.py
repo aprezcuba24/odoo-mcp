@@ -14,16 +14,12 @@ from app.services.customers import search_customers
 async def read_customers(
     odoo: OdooJson2Client,
     *,
-    name: str | None = None,
-    vat: str | None = None,
-    email: str | None = None,
+    query: str | None = None,
     limit: int = 20,
 ) -> dict[str, Any]:
     return await search_customers(
         odoo,
-        name=name,
-        vat=vat,
-        email=email,
+        query=query,
         limit=limit,
     )
 
@@ -44,28 +40,22 @@ async def customers_list_resource(
 
 
 @mcp.resource(
-    uri="app://customers{?name,vat,email,limit}",
+    uri="app://customers{?query,limit}",
     name="Clientes: búsqueda",
     description=(
         "Busca clientes Odoo (res.partner con customer_rank > 0). "
-        "Los parámetros name, vat y email se combinan en OR; "
-        "todos los que tengan valor participan en la búsqueda. "
-        "name = nombre exacto, vat = NIF/CIF (ilike), email = correo (ilike). "
+        "query = texto libre que busca en nombre y teléfono (OR, ilike). "
         "limit acotado a 20."
     ),
     mime_type="application/json",
 )
 async def customers_resource(
-    name: str | None = None,
-    vat: str | None = None,
-    email: str | None = None,
+    query: str | None = None,
     limit: int = 20,
     _odoo: OdooJson2Client = Depends(get_odoo_client),
 ) -> dict[str, Any]:
     return await read_customers(
         _odoo,
-        name=name,
-        vat=vat,
-        email=email,
+        query=query,
         limit=limit,
     )

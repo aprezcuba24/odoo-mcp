@@ -69,17 +69,13 @@ def test_partner_response_false_to_none() -> None:
         {
             "id": 1,
             "name": "Acme",
-            "email": False,
             "phone": False,
-            "vat": "ES123",
         }
     )
     assert normalized == {
         "id": 1,
         "name": "Acme",
-        "email": None,
         "phone": None,
-        "vat": "ES123",
     }
 
 
@@ -96,7 +92,7 @@ def test_list_response_empty() -> None:
 
 def test_list_response_build() -> None:
     records = [
-        {"id": 1, "name": "Acme", "email": False, "phone": False, "vat": "ES1"},
+        {"id": 1, "name": "Acme", "phone": False},
     ]
     result = ListResponse(PartnerResponse(), items_key="customers").build(
         records,
@@ -105,7 +101,7 @@ def test_list_response_build() -> None:
     assert result == {
         "count": 1,
         "customers": [
-            {"id": 1, "name": "Acme", "email": None, "phone": None, "vat": "ES1"},
+            {"id": 1, "name": "Acme", "phone": None},
         ],
         "message": None,
     }

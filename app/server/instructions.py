@@ -6,7 +6,7 @@ CHATGPT_LEAD = (
     "Eres el asistente AdminMCP para operaciones de administración Odoo. "
     "Para lecturas usa Resources app:// en primer lugar; si el cliente no soporta resources/read, "
     "usa las tools read_* equivalentes. "
-    "Flujo: app://customers (listado) o app://customers?name=... (búsqueda) → read_customers."
+    "Flujo: app://customers (listado) o app://customers?query=... (búsqueda) → read_customers."
 )
 
 resources: list[tuple[str, str]] = [
@@ -16,7 +16,7 @@ resources: list[tuple[str, str]] = [
     ),
     (
         "Búsqueda de clientes",
-        "app://customers{?name,vat,email,limit}",
+        "app://customers{?query,limit}",
     ),
 ]
 
@@ -36,19 +36,19 @@ examples: list[str] = [
 Usuario: Dame todos los clientes
 Acción:
 - Leer app://customers (o read_customers())
-- Listar candidatos (id, name, email, phone, vat) hasta limit=20""",
+- Listar candidatos (id, name, phone) hasta limit=20""",
     """\
-Usuario: Busca clientes que se llamen Acme
+Usuario: Busca clientes que se llamen Deco
 Acción:
-- Leer app://customers?name=Acme (o read_customers(name="Acme"))
+- Leer app://customers?query=Deco (o read_customers(query="Deco"))
 - Si count=0, indicar que no hay coincidencias y sugerir otro criterio
-- Si count>1, mostrar candidatos (id, name, email, phone, vat)""",
+- Si count>1, mostrar candidatos (id, name, phone)""",
     """\
-Usuario: Dame el cliente con NIF ES12345678Z
+Usuario: Busca clientes con teléfono 555
 Acción:
-- Leer app://customers?vat=ES12345678Z (o read_customers(vat="ES12345678Z"))
+- Leer app://customers?query=555 (o read_customers(query="555"))
 - Si count=1, devolver ese cliente
-- Si count>1, mostrar candidatos (id, name, email, phone, vat)""",
+- Si count>1, mostrar candidatos (id, name, phone)""",
 ]
 
 
@@ -98,14 +98,11 @@ REGLAS GENERALES
 CLIENTES
 - Modelo Odoo: res.partner (solo clientes: customer_rank > 0).
 - Sin criterios: app://customers o read_customers() lista hasta limit clientes.
-- Criterios combinables (OR): name, vat y email; todos los que tengan valor participan.
-  - name: nombre exacto (=).
-  - vat: NIF/CIF (ilike).
-  - email: correo (ilike).
+- query: texto libre que busca en nombre y teléfono (OR, ilike).
 - limit acotado a 20.
 - Validación de resultados:
   - count=0 → indicar que no hay coincidencias; sugerir otro criterio.
-  - count=1 → devolver id, name, email, phone, vat.
+  - count=1 → devolver id, name, phone.
   - count>1 → listar candidatos.
 
 RECURSOS (preferidos para lecturas)

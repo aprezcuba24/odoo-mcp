@@ -22,52 +22,30 @@ def test_build_domain_without_criteria() -> None:
 
 def test_build_domain_single_name() -> None:
     assert CustomerSearchDomain(name="Acme").build_domain() == [
-        ["name", "=", "Acme"],
+        ["name", "ilike", "Acme"],
         *CUSTOMER_BASE_FILTERS,
     ]
 
 
-def test_build_domain_single_vat() -> None:
-    assert CustomerSearchDomain(vat="ES123").build_domain() == [
-        ["vat", "ilike", "ES123"],
+def test_build_domain_single_phone() -> None:
+    assert CustomerSearchDomain(phone="555").build_domain() == [
+        ["phone", "ilike", "555"],
         *CUSTOMER_BASE_FILTERS,
     ]
 
 
-def test_build_domain_single_email() -> None:
-    assert CustomerSearchDomain(email="a@b.com").build_domain() == [
-        ["email", "ilike", "a@b.com"],
-        *CUSTOMER_BASE_FILTERS,
-    ]
-
-
-def test_build_domain_two_criteria_or() -> None:
-    assert CustomerSearchDomain(name="Acme", email="a@b.com").build_domain() == [
+def test_build_domain_query_or_double() -> None:
+    assert CustomerSearchDomain(name="Deco", phone="Deco").build_domain() == [
         "|",
-        ["name", "=", "Acme"],
-        ["email", "ilike", "a@b.com"],
-        *CUSTOMER_BASE_FILTERS,
-    ]
-
-
-def test_build_domain_all_criteria_or() -> None:
-    assert CustomerSearchDomain(
-        name="Acme",
-        vat="ES",
-        email="a@b.com",
-    ).build_domain() == [
-        "|",
-        "|",
-        ["name", "=", "Acme"],
-        ["vat", "ilike", "ES"],
-        ["email", "ilike", "a@b.com"],
+        ["name", "ilike", "Deco"],
+        ["phone", "ilike", "Deco"],
         *CUSTOMER_BASE_FILTERS,
     ]
 
 
 def test_build_domain_skips_empty_leaves() -> None:
-    assert CustomerSearchDomain(name="Acme", vat=None, email=None).build_domain() == [
-        ["name", "=", "Acme"],
+    assert CustomerSearchDomain(name="Acme", phone=None).build_domain() == [
+        ["name", "ilike", "Acme"],
         *CUSTOMER_BASE_FILTERS,
     ]
 
