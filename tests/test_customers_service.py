@@ -6,11 +6,13 @@ import asyncio
 from unittest.mock import AsyncMock
 
 from app.services.customers import (
-    FIELDS,
     CustomerSearchDomain,
     PartnerResponse,
     search_customers,
 )
+
+CUSTOMER_BASE_FILTERS = CustomerSearchDomain.base_filters
+PARTNER_FIELDS = ["id", "name", "email", "phone", "vat"]
 
 
 def test_resolve_search_mode_priority() -> None:
@@ -22,10 +24,23 @@ def test_resolve_search_mode_priority() -> None:
 
 
 def test_build_domain_modes() -> None:
-    assert CustomerSearchDomain(query="Deco").build_domain() == [["name", "ilike", "Deco"]]
-    assert CustomerSearchDomain(name="Acme").build_domain() == [["name", "=", "Acme"]]
-    assert CustomerSearchDomain(vat="ES123").build_domain() == [["vat", "ilike", "ES123"]]
-    assert CustomerSearchDomain(email="a@b.com").build_domain() == [["email", "ilike", "a@b.com"]]
+    assert CustomerSearchDomain().build_domain() == CUSTOMER_BASE_FILTERS
+    assert CustomerSearchDomain(query="Deco").build_domain() == [
+        ["name", "ilike", "Deco"],
+        *CUSTOMER_BASE_FILTERS,
+    ]
+    assert CustomerSearchDomain(name="Acme").build_domain() == [
+        ["name", "=", "Acme"],
+        *CUSTOMER_BASE_FILTERS,
+    ]
+    assert CustomerSearchDomain(vat="ES123").build_domain() == [
+        ["vat", "ilike", "ES123"],
+        *CUSTOMER_BASE_FILTERS,
+    ]
+    assert CustomerSearchDomain(email="a@b.com").build_domain() == [
+        ["email", "ilike", "a@b.com"],
+        *CUSTOMER_BASE_FILTERS,
+    ]
 
 
 def test_normalize_partner_false_to_none() -> None:
@@ -58,8 +73,8 @@ def test_search_customers_without_criteria() -> None:
         odoo.call.assert_awaited_once_with(
             "res.partner",
             "search_read",
-            domain=[],
-            fields=FIELDS,
+            domain=CUSTOMER_BASE_FILTERS,
+            fields=PARTNER_FIELDS,
             limit=20,
         )
         assert result["count"] == 2
@@ -79,8 +94,8 @@ def test_search_customers_query_calls_odoo() -> None:
         odoo.call.assert_awaited_once_with(
             "res.partner",
             "search_read",
-            domain=[["name", "ilike", "Deco"]],
-            fields=FIELDS,
+            domain=[["name", "ilike", "Deco"], *CUSTOMER_BASE_FILTERS],
+            fields=PARTNER_FIELDS,
             limit=5,
         )
         assert result["count"] == 1
@@ -100,8 +115,8 @@ def test_search_customers_exact_name_multiple_results() -> None:
         odoo.call.assert_awaited_once_with(
             "res.partner",
             "search_read",
-            domain=[["name", "=", "Acme"]],
-            fields=FIELDS,
+            domain=[["name", "=", "Acme"], *CUSTOMER_BASE_FILTERS],
+            fields=PARTNER_FIELDS,
             limit=20,
         )
         assert result["count"] == 2

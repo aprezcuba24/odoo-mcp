@@ -8,7 +8,6 @@ from app.clients.odoo_json2 import OdooJson2Client
 from app.utils.odoo_domain import OdooDomainBuilder, OdooOperator
 from app.utils.object_response import ListResponse, Normalizer, ObjectResponse
 
-FIELDS = ["id", "name", "email", "phone", "vat"]
 MAX_LIMIT = 20
 
 
@@ -20,6 +19,7 @@ class CustomerSearchDomain(OdooDomainBuilder):
 
     priority = ("name", "vat", "email", "query")
     odoo_fields = {"query": "name"}
+    base_filters = ["|", ["customer_rank", ">", 0], ["order_bridge_registered", "=", True]]
 
 
 class PartnerResponse(ObjectResponse):
@@ -45,19 +45,14 @@ async def search_customers(
     """Search via ``res.partner.search_read``."""
     builder = CustomerSearchDomain(query=query, name=name, vat=vat, email=email)
     resolved = builder.resolve_criterion()
-    if resolved is None:
-        domain: list[list[Any]] = []
-        search_meta = None
-    else:
-        mode, value = resolved
-        domain = builder.build_domain()
-        search_meta = {"mode": mode, "value": value}
+    domain = builder.build_domain()
+    search_meta = None if resolved is None else {"mode": resolved[0], "value": resolved[1]}
 
     partners = await odoo.call(
         "res.partner",
         "search_read",
         domain=domain,
-        fields=FIELDS,
+        fields=["id", "name", "email", "phone", "vat"],
         limit=min(limit, MAX_LIMIT),
     )
 
