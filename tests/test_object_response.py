@@ -90,7 +90,6 @@ def test_list_response_empty() -> None:
     assert result == {
         "count": 0,
         "customers": [],
-        "search": None,
         "message": "No criteria",
     }
 
@@ -101,7 +100,6 @@ def test_list_response_build() -> None:
     ]
     result = ListResponse(PartnerResponse(), items_key="customers").build(
         records,
-        search={"mode": "query", "value": "Acme"},
         message=None,
     )
     assert result == {
@@ -109,6 +107,5 @@ def test_list_response_build() -> None:
         "customers": [
             {"id": 1, "name": "Acme", "email": None, "phone": None, "vat": "ES1"},
         ],
-        "search": {"mode": "query", "value": "Acme"},
         "message": None,
     }

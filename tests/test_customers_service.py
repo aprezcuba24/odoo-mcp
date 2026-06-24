@@ -15,20 +15,8 @@ CUSTOMER_BASE_FILTERS = CustomerSearchDomain.base_filters
 PARTNER_FIELDS = ["id", "name", "email", "phone", "vat"]
 
 
-def test_resolve_search_mode_priority() -> None:
-    assert CustomerSearchDomain(query="a", name="b", vat="c", email="d").resolve_criterion() == ("name", "b")
-    assert CustomerSearchDomain(query="a", name=None, vat="c", email="d").resolve_criterion() == ("vat", "c")
-    assert CustomerSearchDomain(query="a", name=None, vat=None, email="d").resolve_criterion() == ("email", "d")
-    assert CustomerSearchDomain(query="a", name=None, vat=None, email=None).resolve_criterion() == ("query", "a")
-    assert CustomerSearchDomain(query=None, name=None, vat=None, email=None).resolve_criterion() is None
-
-
 def test_build_domain_modes() -> None:
     assert CustomerSearchDomain().build_domain() == CUSTOMER_BASE_FILTERS
-    assert CustomerSearchDomain(query="Deco").build_domain() == [
-        ["name", "ilike", "Deco"],
-        *CUSTOMER_BASE_FILTERS,
-    ]
     assert CustomerSearchDomain(name="Acme").build_domain() == [
         ["name", "=", "Acme"],
         *CUSTOMER_BASE_FILTERS,
@@ -38,6 +26,20 @@ def test_build_domain_modes() -> None:
         *CUSTOMER_BASE_FILTERS,
     ]
     assert CustomerSearchDomain(email="a@b.com").build_domain() == [
+        ["email", "ilike", "a@b.com"],
+        *CUSTOMER_BASE_FILTERS,
+    ]
+    assert CustomerSearchDomain(name="Acme", email="a@b.com").build_domain() == [
+        "|",
+        ["name", "=", "Acme"],
+        ["email", "ilike", "a@b.com"],
+        *CUSTOMER_BASE_FILTERS,
+    ]
+    assert CustomerSearchDomain(name="Acme", vat="ES", email="a@b.com").build_domain() == [
+        "|",
+        "|",
+        ["name", "=", "Acme"],
+        ["vat", "ilike", "ES"],
         ["email", "ilike", "a@b.com"],
         *CUSTOMER_BASE_FILTERS,
     ]
@@ -78,28 +80,28 @@ def test_search_customers_without_criteria() -> None:
             limit=20,
         )
         assert result["count"] == 2
-        assert result["search"] is None
         assert result["message"] is None
 
     asyncio.run(run())
 
 
-def test_search_customers_query_calls_odoo() -> None:
+def test_search_customers_multiple_criteria_or() -> None:
     async def run() -> None:
         odoo = AsyncMock()
-        odoo.call.return_value = [
-            {"id": 1, "name": "Deco Addict", "email": "a@b.com", "phone": "123", "vat": "ES1"},
-        ]
-        result = await search_customers(odoo, query="Deco", limit=5)
+        odoo.call.return_value = []
+        await search_customers(odoo, name="Acme", email="x@y.com")
         odoo.call.assert_awaited_once_with(
             "res.partner",
             "search_read",
-            domain=[["name", "ilike", "Deco"], *CUSTOMER_BASE_FILTERS],
+            domain=[
+                "|",
+                ["name", "=", "Acme"],
+                ["email", "ilike", "x@y.com"],
+                *CUSTOMER_BASE_FILTERS,
+            ],
             fields=PARTNER_FIELDS,
-            limit=5,
+            limit=20,
         )
-        assert result["count"] == 1
-        assert result["customers"][0]["name"] == "Deco Addict"
 
     asyncio.run(run())
 
@@ -120,7 +122,6 @@ def test_search_customers_exact_name_multiple_results() -> None:
             limit=20,
         )
         assert result["count"] == 2
-        assert result["search"] == {"mode": "name", "value": "Acme"}
 
     asyncio.run(run())
 

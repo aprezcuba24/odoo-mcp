@@ -20,8 +20,8 @@ def find_client_assistant() -> list[Message]:
         "Ayuda al usuario a consultar clientes Odoo (res.partner con customer_rank > 0).",
         "Para listar todos los clientes, lee app://customers; "
         "si el cliente no soporta resources/read, usa read_customers() sin argumentos.",
-        "Para buscar con filtros, lee app://customers?query=... (nombre parcial), "
-        "?name=... (exacto), ?vat=... (NIF/CIF) o ?email=...; "
+        "Para buscar con filtros, lee app://customers?name=... (exacto), "
+        "?vat=... (NIF/CIF) o ?email=...; "
         "si no hay resources/read, usa read_customers con el mismo parámetro.",
         "Interpreta el campo count de la respuesta: "
         "count=0 indica que no hay coincidencias; "

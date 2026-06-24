@@ -6,7 +6,7 @@ CHATGPT_LEAD = (
     "Eres el asistente AdminMCP para operaciones de administración Odoo. "
     "Para lecturas usa Resources app:// en primer lugar; si el cliente no soporta resources/read, "
     "usa las tools read_* equivalentes. "
-    "Flujo: app://customers (listado) o app://customers?query=... (búsqueda) → read_customers."
+    "Flujo: app://customers (listado) o app://customers?name=... (búsqueda) → read_customers."
 )
 
 resources: list[tuple[str, str]] = [
@@ -16,7 +16,7 @@ resources: list[tuple[str, str]] = [
     ),
     (
         "Búsqueda de clientes",
-        "app://customers{?query,name,vat,email,limit}",
+        "app://customers{?name,vat,email,limit}",
     ),
 ]
 
@@ -38,9 +38,9 @@ Acción:
 - Leer app://customers (o read_customers())
 - Listar candidatos (id, name, email, phone, vat) hasta limit=20""",
     """\
-Usuario: Busca clientes que se llamen Deco
+Usuario: Busca clientes que se llamen Acme
 Acción:
-- Leer app://customers?query=Deco (o read_customers(query="Deco"))
+- Leer app://customers?name=Acme (o read_customers(name="Acme"))
 - Si count=0, indicar que no hay coincidencias y sugerir otro criterio
 - Si count>1, mostrar candidatos (id, name, email, phone, vat)""",
     """\
@@ -98,8 +98,7 @@ REGLAS GENERALES
 CLIENTES
 - Modelo Odoo: res.partner (solo clientes: customer_rank > 0).
 - Sin criterios: app://customers o read_customers() lista hasta limit clientes.
-- Criterios mutuamente excluyentes (prioridad: name > vat > email > query):
-  - query: nombre parcial (ilike), recomendado para texto libre.
+- Criterios combinables (OR): name, vat y email; todos los que tengan valor participan.
   - name: nombre exacto (=).
   - vat: NIF/CIF (ilike).
   - email: correo (ilike).

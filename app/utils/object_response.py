@@ -58,7 +58,6 @@ class ListResponse:
         return {
             "count": 0,
             self._items_key: [],
-            "search": None,
             "message": message,
         }
 
@@ -66,13 +65,11 @@ class ListResponse:
         self,
         records: list[dict[str, Any]],
         *,
-        search: dict[str, Any] | None = None,
         message: str | None = None,
     ) -> dict[str, Any]:
         items = self._renderer.render_many(records)
         return {
             "count": len(items),
             self._items_key: items,
-            "search": search,
             "message": message,
         }
