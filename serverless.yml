@@ -10,11 +10,41 @@ provider:
     name: admin-mcp-serverless-deployments-us-east-1
   environment:
     ADMIN_API_TIMEOUT: "30"
+    CART_STORE_BACKEND: dynamodb
+    DYNAMODB_CART_TABLE: ${self:service}-cart-${sls:stage}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:DeleteItem
+          Resource:
+            - Fn::GetAtt: [CartTable, Arn]
 
 functions:
   mcp:
     handler: app/lambda_handler.handler
     url: true
+
+resources:
+  Resources:
+    CartTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-cart-${sls:stage}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: backend
+            AttributeType: S
+          - AttributeName: token
+            AttributeType: S
+        KeySchema:
+          - AttributeName: backend
+            KeyType: HASH
+          - AttributeName: token
+            KeyType: RANGE
 
 custom:
   pythonRequirements:

@@ -6,7 +6,8 @@ CHATGPT_LEAD = (
     "Eres el asistente AdminMCP para operaciones de administración Odoo. "
     "Para lecturas usa Resources app:// en primer lugar; si el cliente no soporta resources/read, "
     "usa las tools read_* equivalentes. "
-    "Flujo: app://customers (listado) o app://customers?query=... (búsqueda) → read_customers."
+    "Flujo clientes: app://customers (listado) o app://customers?query=... (búsqueda) → read_customers. "
+    "Flujo pedidos: seleccionar cliente → create_cart → add_to_cart → get_cart (confirmar) → create_order."
 )
 
 resources: list[tuple[str, str]] = [
@@ -25,10 +26,15 @@ tools: list[tuple[str, list[str]]] = [
         "Lecturas (alternativa si no hay resources/read)",
         ["read_customers"],
     ),
+    (
+        "Carrito y pedidos",
+        ["create_cart", "add_to_cart", "get_cart", "clear_cart", "create_order"],
+    ),
 ]
 
 prompts: list[tuple[str, str]] = [
-    ("admin_assistant", "flujo guiado — listado y búsqueda de clientes Odoo"),
+    ("find_client_assistant", "flujo guiado — listado y búsqueda de clientes Odoo"),
+    ("sales_order_assistant", "flujo guiado — carrito y creación de pedidos confirmados"),
 ]
 
 examples: list[str] = [
@@ -49,6 +55,20 @@ Acción:
 - Leer app://customers?query=555 (o read_customers(query="555"))
 - Si count=1, devolver ese cliente con todos los campos
 - Si count>1, mostrar candidatos (id, name, phone, order_bridge_registered, order_bridge_phone_validated, address)""",
+    """\
+Usuario: Crea un pedido para Deco con 2 unidades del producto 7 y 1 del producto 12
+Acción:
+- read_customers(query="Deco") → elegir partner_id
+- create_cart(partner_id)
+- add_to_cart con lines_json o llamadas sucesivas
+- get_cart() → mostrar resumen al usuario y pedir confirmación
+- Tras confirmación: create_order()
+- Informar order.name, amount_total y que el carrito quedó vacío""",
+    """\
+Usuario: Quiero pedir para otro cliente pero tengo un carrito abierto
+Acción:
+- Indicar que debe terminar el pedido (create_order tras get_cart y confirmación) \
+o abandonar con clear_cart antes de create_cart con otro partner_id""",
 ]
 
 
@@ -104,6 +124,16 @@ CLIENTES
   - count=0 → indicar que no hay coincidencias; sugerir otro criterio.
   - count=1 → devolver id, name, phone, order_bridge_registered, order_bridge_phone_validated, address.
   - count>1 → listar candidatos con esos campos.
+
+CARRITO Y PEDIDOS
+- El carrito se identifica con la cabecera auth-key (backend + token del usuario API).
+- Flujo: (1) seleccionar cliente → (2) create_cart(partner_id) → (3) add_to_cart → \
+(4) get_cart para confirmar con el usuario → (5) create_order(ref opcional).
+- create_cart es obligatorio antes del primer producto.
+- create_order llama a sale.order.api_create_confirmed_order y vacía el carrito si tiene éxito.
+- El usuario puede indicar cliente y productos en el mismo mensaje; siempre create_cart antes de add_to_cart.
+- Para otro cliente: terminar con create_order o abandonar con clear_cart (borra cliente y líneas).
+- add_to_cart: product_id + quantity, o lines_json='[{{"product_id": 7, "qty": 2.0}}, ...]'.
 
 RECURSOS (preferidos para lecturas)
 

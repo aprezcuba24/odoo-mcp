@@ -10,6 +10,8 @@ from urllib.parse import urlparse
 from fastmcp.server.dependencies import get_http_request
 from starlette.requests import Request
 
+from app.clients.odoo_json2 import raw_api_key
+from app.services.cart.base import CartStoreKey
 from app.utils.exceptions import (
     AmbiguousAuthKeyError,
     InvalidAuthKeyError,
@@ -34,6 +36,12 @@ class AppContext:
     bearer_token: str
     user_token: str
     database: str | None
+
+    def cart_store_key(self) -> CartStoreKey:
+        return CartStoreKey(
+            backend=backend_domain(self.base_url),
+            token=raw_api_key(self.user_token),
+        )
 
 
 def backend_domain(base_url: str) -> str:
