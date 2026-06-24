@@ -5,25 +5,18 @@ from __future__ import annotations
 from typing import Any
 
 from app.clients.odoo_json2 import OdooJson2Client
-from app.utils.odoo_domain import OdooDomainBuilder, OdooOperator
 from app.utils.object_response import ListResponse, Normalizer, ObjectResponse
 
 MAX_LIMIT = 20
-
-
-class CustomerSearchDomain(OdooDomainBuilder):
-    base_filters = ["|", ["customer_rank", OdooOperator.GT, 0], ["order_bridge_registered", OdooOperator.EQ, True]]
-    query = [
-        "|",
-        ["name", OdooOperator.ILIKE],
-        ["phone", OdooOperator.ILIKE],
-    ]
 
 
 class PartnerResponse(ObjectResponse):
     id = Normalizer.RAW
     name = Normalizer.DEFAULT_EMPTY
     phone = Normalizer.OPTIONAL
+    order_bridge_registered = Normalizer.RAW
+    order_bridge_phone_validated = Normalizer.RAW
+    address = Normalizer.RAW
 
 
 _customer_list = ListResponse(PartnerResponse(), items_key="customers")
@@ -35,17 +28,12 @@ async def search_customers(
     query: str | None = None,
     limit: int = 20,
 ) -> dict[str, Any]:
-    """Search via ``res.partner.search_read``."""
-    builder = CustomerSearchDomain(name=query, phone=query)
-    domain = builder.build_domain()
+    """Search via ``res.partner.api_search_customers`` (nombre, teléfono y dirección)."""
+    params: dict[str, Any] = {"limit": min(limit, MAX_LIMIT)}
+    if query is not None and str(query).strip():
+        params["query"] = str(query).strip()
 
-    partners = await odoo.call(
-        "res.partner",
-        "search_read",
-        domain=domain,
-        fields=["id", "name", "phone"],
-        limit=min(limit, MAX_LIMIT),
-    )
+    partners = await odoo.call("res.partner", "api_search_customers", **params)
 
     message: str | None = None
     if not partners:

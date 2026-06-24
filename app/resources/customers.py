@@ -43,8 +43,8 @@ async def customers_list_resource(
     uri="app://customers{?query,limit}",
     name="Clientes: búsqueda",
     description=(
-        "Busca clientes Odoo (res.partner con customer_rank > 0). "
-        "query = texto libre que busca en nombre y teléfono (OR, ilike). "
+        "Busca clientes Odoo vía api_search_customers. "
+        "query = texto libre en nombre, teléfono y campos de dirección. "
         "limit acotado a 20."
     ),
     mime_type="application/json",

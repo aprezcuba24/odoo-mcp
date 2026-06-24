@@ -70,12 +70,18 @@ def test_partner_response_false_to_none() -> None:
             "id": 1,
             "name": "Acme",
             "phone": False,
+            "order_bridge_registered": True,
+            "order_bridge_phone_validated": False,
+            "address": {"street": "Calle 1"},
         }
     )
     assert normalized == {
         "id": 1,
         "name": "Acme",
         "phone": None,
+        "order_bridge_registered": True,
+        "order_bridge_phone_validated": False,
+        "address": {"street": "Calle 1"},
     }
 
 
@@ -92,7 +98,14 @@ def test_list_response_empty() -> None:
 
 def test_list_response_build() -> None:
     records = [
-        {"id": 1, "name": "Acme", "phone": False},
+        {
+            "id": 1,
+            "name": "Acme",
+            "phone": False,
+            "order_bridge_registered": False,
+            "order_bridge_phone_validated": False,
+            "address": {},
+        },
     ]
     result = ListResponse(PartnerResponse(), items_key="customers").build(
         records,
@@ -101,7 +114,14 @@ def test_list_response_build() -> None:
     assert result == {
         "count": 1,
         "customers": [
-            {"id": 1, "name": "Acme", "phone": None},
+            {
+                "id": 1,
+                "name": "Acme",
+                "phone": None,
+                "order_bridge_registered": False,
+                "order_bridge_phone_validated": False,
+                "address": {},
+            },
         ],
         "message": None,
     }

@@ -5,55 +5,48 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import AsyncMock
 
-from app.services.customers import (
-    CustomerSearchDomain,
-    PartnerResponse,
-    search_customers,
-)
+from app.services.customers import PartnerResponse, search_customers
 
-CUSTOMER_BASE_FILTERS = CustomerSearchDomain.base_filters
-PARTNER_FIELDS = ["id", "name", "phone"]
-
-
-def _query_domain(value: str) -> list:
-    return [
-        "|",
-        ["name", "ilike", value],
-        ["phone", "ilike", value],
-        *CUSTOMER_BASE_FILTERS,
-    ]
-
-
-def test_build_domain_modes() -> None:
-    assert CustomerSearchDomain().build_domain() == CUSTOMER_BASE_FILTERS
-    assert CustomerSearchDomain(name="Acme").build_domain() == [
-        ["name", "ilike", "Acme"],
-        *CUSTOMER_BASE_FILTERS,
-    ]
-    assert CustomerSearchDomain(phone="555").build_domain() == [
-        ["phone", "ilike", "555"],
-        *CUSTOMER_BASE_FILTERS,
-    ]
-    assert CustomerSearchDomain(name="Acme", phone="Acme").build_domain() == [
-        "|",
-        ["name", "ilike", "Acme"],
-        ["phone", "ilike", "Acme"],
-        *CUSTOMER_BASE_FILTERS,
-    ]
+SAMPLE_PARTNER = {
+    "id": 42,
+    "name": "María",
+    "phone": "+34600000000",
+    "order_bridge_registered": True,
+    "order_bridge_phone_validated": False,
+    "address": {
+        "street": "Calle 10",
+        "municipality_id": 3,
+        "municipality_name": "Camagüey",
+        "neighborhood_id": 15,
+        "neighborhood_name": "Centro",
+        "state": "Camagüey",
+    },
+}
 
 
-def test_normalize_partner_false_to_none() -> None:
+def test_normalize_partner_full_response() -> None:
+    normalized = PartnerResponse().render(SAMPLE_PARTNER)
+    assert normalized == SAMPLE_PARTNER
+
+
+def test_normalize_partner_false_phone_to_none() -> None:
     normalized = PartnerResponse().render(
         {
             "id": 1,
             "name": "Acme",
             "phone": False,
+            "order_bridge_registered": False,
+            "order_bridge_phone_validated": False,
+            "address": {},
         }
     )
     assert normalized == {
         "id": 1,
         "name": "Acme",
         "phone": None,
+        "order_bridge_registered": False,
+        "order_bridge_phone_validated": False,
+        "address": {},
     }
 
 
@@ -61,34 +54,32 @@ def test_search_customers_without_criteria() -> None:
     async def run() -> None:
         odoo = AsyncMock()
         odoo.call.return_value = [
-            {"id": 1, "name": "Acme", "phone": False},
-            {"id": 2, "name": "Beta", "phone": False},
+            {**SAMPLE_PARTNER, "id": 1, "name": "Acme", "phone": False},
+            {**SAMPLE_PARTNER, "id": 2, "name": "Beta", "phone": False},
         ]
         result = await search_customers(odoo)
         odoo.call.assert_awaited_once_with(
             "res.partner",
-            "search_read",
-            domain=CUSTOMER_BASE_FILTERS,
-            fields=PARTNER_FIELDS,
+            "api_search_customers",
             limit=20,
         )
         assert result["count"] == 2
         assert result["message"] is None
+        assert result["customers"][0]["phone"] is None
 
     asyncio.run(run())
 
 
-def test_search_customers_with_query_or_domain() -> None:
+def test_search_customers_with_query() -> None:
     async def run() -> None:
         odoo = AsyncMock()
         odoo.call.return_value = []
         await search_customers(odoo, query="Acme")
         odoo.call.assert_awaited_once_with(
             "res.partner",
-            "search_read",
-            domain=_query_domain("Acme"),
-            fields=PARTNER_FIELDS,
+            "api_search_customers",
             limit=20,
+            query="Acme",
         )
 
     asyncio.run(run())
@@ -98,18 +89,33 @@ def test_search_customers_with_query_multiple_results() -> None:
     async def run() -> None:
         odoo = AsyncMock()
         odoo.call.return_value = [
-            {"id": 1, "name": "Acme", "phone": False},
-            {"id": 2, "name": "Acme", "phone": False},
+            {**SAMPLE_PARTNER, "id": 1, "name": "Acme"},
+            {**SAMPLE_PARTNER, "id": 2, "name": "Acme"},
         ]
         result = await search_customers(odoo, query="Acme")
         odoo.call.assert_awaited_once_with(
             "res.partner",
-            "search_read",
-            domain=_query_domain("Acme"),
-            fields=PARTNER_FIELDS,
+            "api_search_customers",
             limit=20,
+            query="Acme",
         )
         assert result["count"] == 2
+        assert result["customers"][0]["address"]["neighborhood_name"] == "Centro"
+
+    asyncio.run(run())
+
+
+def test_search_customers_strips_query() -> None:
+    async def run() -> None:
+        odoo = AsyncMock()
+        odoo.call.return_value = []
+        await search_customers(odoo, query="  Acme  ")
+        odoo.call.assert_awaited_once_with(
+            "res.partner",
+            "api_search_customers",
+            limit=20,
+            query="Acme",
+        )
 
     asyncio.run(run())
 

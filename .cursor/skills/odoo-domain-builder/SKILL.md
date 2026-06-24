@@ -3,7 +3,7 @@ name: odoo-domain-builder
 description: >-
   Construye domains Odoo declarativos con OdooDomainBuilder en AdminMCP.
   Usar al añadir o modificar búsquedas Odoo, filtros base, criterios OR/AND,
-  CustomerSearchDomain, app/utils/odoo_domain.py o servicios search_*.
+  app/utils/odoo_domain.py o servicios search_* que usen search_read/search.
 ---
 
 # OdooDomainBuilder
@@ -11,7 +11,9 @@ description: >-
 Patrón del proyecto para generar **domains Odoo** (`search_read`, `search`, etc.) sin ensamblar listas a mano.
 
 Implementación: `app/utils/odoo_domain.py`  
-Referencia de uso: `CustomerSearchDomain` en `app/services/customers.py`
+Referencia de uso: `AndDomain` en `tests/test_odoo_domain.py`
+
+> La búsqueda de clientes usa `res.partner.api_search_customers` y **no** requiere domain builder.
 
 ## Conceptos
 
@@ -31,40 +33,26 @@ Reglas clave:
 
 Operadores disponibles (`OdooOperator`): `EQ` (`=`), `ILIKE` (`ilike`), `GT` (`>`).
 
-## Ejemplo de referencia: CustomerSearchDomain
+## Ejemplo de referencia: AndDomain
 
 ```python
-class CustomerSearchDomain(OdooDomainBuilder):
-    base_filters = [
-        "|",
-        ["customer_rank", OdooOperator.GT, 0],
-        ["order_bridge_registered", OdooOperator.EQ, True],
-    ]
+class AndDomain(OdooDomainBuilder):
     query = [
-        "|",
-        ["name", OdooOperator.ILIKE],
-        ["phone", OdooOperator.ILIKE],
+        "&",
+        ["name", OdooOperator.EQ],
+        ["email", OdooOperator.ILIKE],
     ]
 ```
 
-Uso en servicio:
+Uso:
 
 ```python
-builder = CustomerSearchDomain(name=query, phone=query)
-domain = builder.build_domain()
+AndDomain(name="Acme", email="a@b.com").build_domain()
+# → ["&", ["name","=","Acme"], ["email","ilike","a@b.com"]]
+
+AndDomain(name="Acme").build_domain()
+# → [["name","=","Acme"]]   # email omitido, no queda AND huérfano
 ```
-
-### Dominios generados
-
-| Entrada | Domain |
-|---------|--------|
-| Sin kwargs | Solo `base_filters` |
-| `name="Acme"` | `[["name","ilike","Acme"], *base_filters]` |
-| `phone="555"` | `[["phone","ilike","555"], *base_filters]` |
-| `name="Deco", phone="Deco"` | `["\|", ["name","ilike","Deco"], ["phone","ilike","Deco"], *base_filters]` |
-| `name="Acme", phone=None` | Igual que solo `name` — la hoja vacía se descarta |
-
-`search_customers` pasa el mismo texto en `name` y `phone` para buscar por nombre **o** teléfono.
 
 ## Crear un nuevo builder
 

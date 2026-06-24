@@ -36,19 +36,19 @@ examples: list[str] = [
 Usuario: Dame todos los clientes
 Acción:
 - Leer app://customers (o read_customers())
-- Listar candidatos (id, name, phone) hasta limit=20""",
+- Listar candidatos (id, name, phone, order_bridge_registered, order_bridge_phone_validated, address) hasta limit=20""",
     """\
 Usuario: Busca clientes que se llamen Deco
 Acción:
 - Leer app://customers?query=Deco (o read_customers(query="Deco"))
 - Si count=0, indicar que no hay coincidencias y sugerir otro criterio
-- Si count>1, mostrar candidatos (id, name, phone)""",
+- Si count>1, mostrar candidatos (id, name, phone, order_bridge_registered, order_bridge_phone_validated, address)""",
     """\
 Usuario: Busca clientes con teléfono 555
 Acción:
 - Leer app://customers?query=555 (o read_customers(query="555"))
-- Si count=1, devolver ese cliente
-- Si count>1, mostrar candidatos (id, name, phone)""",
+- Si count=1, devolver ese cliente con todos los campos
+- Si count>1, mostrar candidatos (id, name, phone, order_bridge_registered, order_bridge_phone_validated, address)""",
 ]
 
 
@@ -96,14 +96,14 @@ REGLAS GENERALES
 3. Cada petición requiere cabecera auth-key (backend + token).
 
 CLIENTES
-- Modelo Odoo: res.partner (solo clientes: customer_rank > 0).
+- Modelo Odoo: res.partner (api_search_customers en el backend).
 - Sin criterios: app://customers o read_customers() lista hasta limit clientes.
-- query: texto libre que busca en nombre y teléfono (OR, ilike).
+- query: texto libre que busca en nombre, teléfono y campos de dirección.
 - limit acotado a 20.
 - Validación de resultados:
   - count=0 → indicar que no hay coincidencias; sugerir otro criterio.
-  - count=1 → devolver id, name, phone.
-  - count>1 → listar candidatos.
+  - count=1 → devolver id, name, phone, order_bridge_registered, order_bridge_phone_validated, address.
+  - count>1 → listar candidatos con esos campos.
 
 RECURSOS (preferidos para lecturas)
 
