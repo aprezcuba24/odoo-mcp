@@ -8,7 +8,6 @@ from app.clients.odoo_json2 import OdooJson2Client
 from app.utils.odoo_domain import OdooDomainBuilder, OdooOperator
 from app.utils.object_response import ListResponse, Normalizer, ObjectResponse
 
-CUSTOMER_FILTER: list[Any] = ["customer_rank", ">", 0]
 FIELDS = ["id", "name", "email", "phone", "vat"]
 MAX_LIMIT = 20
 
@@ -21,7 +20,6 @@ class CustomerSearchDomain(OdooDomainBuilder):
 
     priority = ("name", "vat", "email", "query")
     odoo_fields = {"query": "name"}
-    base_filters = [CUSTOMER_FILTER]
 
 
 class PartnerResponse(ObjectResponse):
@@ -44,11 +42,11 @@ async def search_customers(
     email: str | None = None,
     limit: int = 20,
 ) -> dict[str, Any]:
-    """Search customers via ``res.partner.search_read`` (customers only)."""
+    """Search via ``res.partner.search_read``."""
     builder = CustomerSearchDomain(query=query, name=name, vat=vat, email=email)
     resolved = builder.resolve_criterion()
     if resolved is None:
-        domain = [CUSTOMER_FILTER]
+        domain: list[list[Any]] = []
         search_meta = None
     else:
         mode, value = resolved
@@ -66,7 +64,7 @@ async def search_customers(
     message: str | None = None
     if not partners:
         if resolved is None:
-            message = "No hay clientes registrados."
+            message = "No hay contactos registrados."
         else:
             message = "No hay clientes que coincidan con el criterio indicado."
 

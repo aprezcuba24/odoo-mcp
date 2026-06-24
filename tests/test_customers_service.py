@@ -22,22 +22,10 @@ def test_resolve_search_mode_priority() -> None:
 
 
 def test_build_domain_modes() -> None:
-    assert CustomerSearchDomain(query="Deco").build_domain() == [
-        ["name", "ilike", "Deco"],
-        ["customer_rank", ">", 0],
-    ]
-    assert CustomerSearchDomain(name="Acme").build_domain() == [
-        ["name", "=", "Acme"],
-        ["customer_rank", ">", 0],
-    ]
-    assert CustomerSearchDomain(vat="ES123").build_domain() == [
-        ["vat", "ilike", "ES123"],
-        ["customer_rank", ">", 0],
-    ]
-    assert CustomerSearchDomain(email="a@b.com").build_domain() == [
-        ["email", "ilike", "a@b.com"],
-        ["customer_rank", ">", 0],
-    ]
+    assert CustomerSearchDomain(query="Deco").build_domain() == [["name", "ilike", "Deco"]]
+    assert CustomerSearchDomain(name="Acme").build_domain() == [["name", "=", "Acme"]]
+    assert CustomerSearchDomain(vat="ES123").build_domain() == [["vat", "ilike", "ES123"]]
+    assert CustomerSearchDomain(email="a@b.com").build_domain() == [["email", "ilike", "a@b.com"]]
 
 
 def test_normalize_partner_false_to_none() -> None:
@@ -70,7 +58,7 @@ def test_search_customers_without_criteria() -> None:
         odoo.call.assert_awaited_once_with(
             "res.partner",
             "search_read",
-            domain=[["customer_rank", ">", 0]],
+            domain=[],
             fields=FIELDS,
             limit=20,
         )
@@ -91,7 +79,7 @@ def test_search_customers_query_calls_odoo() -> None:
         odoo.call.assert_awaited_once_with(
             "res.partner",
             "search_read",
-            domain=[["name", "ilike", "Deco"], ["customer_rank", ">", 0]],
+            domain=[["name", "ilike", "Deco"]],
             fields=FIELDS,
             limit=5,
         )
@@ -112,7 +100,7 @@ def test_search_customers_exact_name_multiple_results() -> None:
         odoo.call.assert_awaited_once_with(
             "res.partner",
             "search_read",
-            domain=[["name", "=", "Acme"], ["customer_rank", ">", 0]],
+            domain=[["name", "=", "Acme"]],
             fields=FIELDS,
             limit=20,
         )
@@ -130,5 +118,16 @@ def test_search_customers_no_results_message() -> None:
         assert result["count"] == 0
         assert result["message"] is not None
         assert "no hay clientes" in result["message"].lower()
+
+    asyncio.run(run())
+
+
+def test_search_customers_no_results_without_criteria() -> None:
+    async def run() -> None:
+        odoo = AsyncMock()
+        odoo.call.return_value = []
+        result = await search_customers(odoo)
+        assert result["count"] == 0
+        assert result["message"] == "No hay contactos registrados."
 
     asyncio.run(run())
