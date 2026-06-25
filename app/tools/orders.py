@@ -49,7 +49,8 @@ async def create_order_tool(
             "error": "empty_cart",
             "message": (
                 "El carrito no tiene productos. "
-                "Añade productos con add_to_cart antes de crear el pedido."
+                "Busca productos con read_catalog_products (o app://catalog/products) "
+                "y añádelos con add_to_cart antes de crear el pedido."
             ),
             "partner_id": cart.partner_id,
             "partner_name": cart.partner_name,

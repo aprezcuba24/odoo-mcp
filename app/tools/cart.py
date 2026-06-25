@@ -35,6 +35,9 @@ async def create_cart_tool(
     description=(
         "Añade uno o varios productos al carrito del servidor MCP. "
         "Requiere create_cart previo con un cliente. "
+        "product_id debe obtenerse del catálogo (app://catalog/products, read_catalog_products "
+        "o read_catalog_product); no inventes IDs. Si el usuario describe un producto por nombre, "
+        "busca primero en el catálogo y confirma si hay varias coincidencias. "
         "Modo simple: product_id y quantity (> 0); suma cantidad si el producto ya está. "
         "Modo múltiple: lines_json como cadena JSON "
         '[{"product_id": 7, "qty": 2.0}, {"product_id": 12, "qty": 1.0}]. '

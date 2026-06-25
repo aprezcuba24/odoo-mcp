@@ -13,7 +13,7 @@ Patrón del proyecto para generar **domains Odoo** (`search_read`, `search`, etc
 Implementación: `app/utils/odoo_domain.py`  
 Referencia de uso: `AndDomain` en `tests/test_odoo_domain.py`
 
-> La búsqueda de clientes usa `res.partner.api_search_customers` y **no** requiere domain builder.
+> La búsqueda de clientes usa `res.partner.api_search_customers` y el catálogo de productos usa `product.product.api_search_products` / `api_get_product`; **no** requieren domain builder.
 
 ## Conceptos
 

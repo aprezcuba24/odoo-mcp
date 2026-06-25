@@ -22,13 +22,17 @@ def sales_order_assistant() -> list[Message]:
         "Flujo obligatorio:",
         "1. Buscar y seleccionar el cliente con read_customers (o app://customers).",
         "2. Llamar a create_cart(partner_id) antes de añadir el primer producto.",
-        "3. Añadir productos con add_to_cart (product_id + quantity) o varias líneas con lines_json.",
-        "4. Cuando el usuario quiera crear el pedido, llama primero a get_cart y muestra el resumen "
+        "3. Resolver productos en el catálogo: app://catalog/products, read_catalog_products(search=...) "
+        "o read_catalog_product(product_id). No inventes product_id ni precios.",
+        "4. Si el usuario describe un producto por nombre, busca en catálogo; "
+        "con varias coincidencias muestra opciones y pide confirmación.",
+        "5. Añadir productos con add_to_cart (product_id + quantity) o varias líneas con lines_json.",
+        "6. Cuando el usuario quiera crear el pedido, llama primero a get_cart y muestra el resumen "
         "(cliente, líneas, cantidades) para que confirme.",
-        "5. Tras la confirmación del usuario, llama a create_order(ref opcional); "
+        "7. Tras la confirmación del usuario, llama a create_order(ref opcional); "
         "si tiene éxito, el carrito se vacía automáticamente.",
         "El usuario puede indicar cliente y productos en el mismo mensaje: "
-        "resuelve el cliente, crea el carrito y añade los productos en ese orden.",
+        "resuelve el cliente, crea el carrito, consulta catálogo y añade productos en ese orden.",
         "Siempre debe haber un cliente (create_cart) antes del primer producto.",
         "Para atender a otro cliente, primero termina el pedido en curso (create_order) "
         "o abandona la sesión (clear_cart).",
