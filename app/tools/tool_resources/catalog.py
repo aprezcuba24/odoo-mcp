@@ -36,7 +36,8 @@ async def read_catalog_categories_tool(
     description=(
         "Lista productos del catálogo (product.product api_search_products vía JSON-2). "
         "Admite búsqueda por nombre (search), filtro por categoría (category_id) y paginación "
-        "(limit, offset). Equivalente al Resource app://catalog/products."
+        "(limit, offset). Incluye stock disponible (available_qty) y existencias (qty_on_hand). "
+        "Equivalente al Resource app://catalog/products."
     ),
     annotations=READ_ONLY,
 )
@@ -60,7 +61,8 @@ async def read_catalog_products_tool(
     name="read_catalog_product",
     description=(
         "Detalle de un producto por ID (product.product api_get_product vía JSON-2): "
-        "nombre, precio, categoría, código, unidad de medida y código de barras. "
+        "nombre, precio, categoría, código, unidad de medida, código de barras, "
+        "stock disponible (available_qty) y existencias (qty_on_hand). "
         "Equivalente al Resource app://catalog/products/{product_id}."
     ),
     annotations=READ_ONLY,

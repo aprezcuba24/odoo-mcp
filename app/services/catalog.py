@@ -16,6 +16,53 @@ class CategoryResponse(ObjectResponse):
     name = Normalizer.DEFAULT_EMPTY
 
 
+class ProductResponse(ObjectResponse):
+    id = Normalizer.RAW
+    name = Normalizer.DEFAULT_EMPTY
+    default_code = Normalizer.OPTIONAL
+    list_price = Normalizer.RAW
+    uom_name = Normalizer.OPTIONAL
+    barcode = Normalizer.OPTIONAL
+    category = Normalizer.RAW
+    available_qty = Normalizer.RAW
+    qty_on_hand = Normalizer.RAW
+
+
+_product_renderer = ProductResponse()
+
+_PRODUCT_DISPLAY_FIELDS = [
+    "id",
+    "name",
+    "list_price",
+    "category",
+    "available_qty",
+    "qty_on_hand",
+]
+
+_PRODUCT_DETAIL_DISPLAY_FIELDS = [
+    *_PRODUCT_DISPLAY_FIELDS,
+    "default_code",
+    "uom_name",
+    "barcode",
+]
+
+
+def _product_agent_hint(*, item_count: int, search_term: str | None) -> dict[str, Any]:
+    if item_count == 0:
+        if search_term:
+            return {"next": "ask_user_for_different_criteria"}
+        return {}
+    if item_count > 1 and search_term:
+        return {
+            "next": "disambiguate",
+            "display": _PRODUCT_DISPLAY_FIELDS,
+        }
+    return {
+        "next": "show_products",
+        "display": _PRODUCT_DISPLAY_FIELDS,
+    }
+
+
 async def list_categories(odoo: OdooJson2Client) -> dict[str, Any]:
     """Categories that have at least one visible catalog product."""
     rows = await odoo.call(
@@ -51,7 +98,8 @@ async def list_products_page(
         params["category_id"] = category_id
 
     payload = await odoo.call("product.product", "api_search_products", **params)
-    items = payload["items"]
+    raw_items = payload["items"]
+    items = _product_renderer.render_many(raw_items)
 
     message: str | None = None
     if not items:
@@ -63,13 +111,17 @@ async def list_products_page(
         elif category_id is not None:
             message = "No hay productos en esa categoría."
 
-    return {
+    result: dict[str, Any] = {
         "items": items,
         "limit": payload["limit"],
         "offset": payload["offset"],
         "total": payload["total"],
         "message": message,
     }
+    agent_hint = _product_agent_hint(item_count=len(items), search_term=search_term)
+    if agent_hint:
+        result["_agent"] = agent_hint
+    return result
 
 
 async def get_product_detail(
@@ -78,8 +130,13 @@ async def get_product_detail(
     product_id: int,
 ) -> dict[str, Any]:
     """Single product detail via ``product.product.api_get_product``."""
-    return await odoo.call(
+    raw = await odoo.call(
         "product.product",
         "api_get_product",
         product_id=product_id,
     )
+    product = _product_renderer.render(raw)
+    return {
+        **product,
+        "_agent": {"display": _PRODUCT_DETAIL_DISPLAY_FIELDS},
+    }

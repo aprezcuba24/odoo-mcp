@@ -50,7 +50,8 @@ async def products_list_resource(
     name="Catálogo: productos",
     description=(
         "Lista productos del catálogo (product.product api_search_products). "
-        "search = nombre parcial; category_id = filtro por categoría; limit/offset paginación."
+        "search = nombre parcial; category_id = filtro por categoría; limit/offset paginación. "
+        "Incluye stock disponible (available_qty) y existencias (qty_on_hand)."
     ),
     mime_type="application/json",
 )
@@ -75,7 +76,8 @@ async def products_resource(
     name="Detalle de producto",
     description=(
         "Detalle de un producto por ID: nombre, precio, categoría, código, "
-        "unidad de medida y código de barras."
+        "unidad de medida, código de barras, stock disponible (available_qty) "
+        "y existencias (qty_on_hand)."
     ),
     mime_type="application/json",
 )

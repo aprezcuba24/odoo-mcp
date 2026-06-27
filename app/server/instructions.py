@@ -84,7 +84,7 @@ Acción:
 - read_customers(query="Deco")
 - Si count>1: listar candidatos con id, name, phone y address; detenerse y esperar elección del usuario
 - Si count=1: create_cart(partner_id)
-- read_catalog_product(7) y read_catalog_product(12) para confirmar nombres (o si el usuario ya dio IDs válidos del catálogo)
+- read_catalog_product(7) y read_catalog_product(12) para confirmar nombres y stock (available_qty, qty_on_hand)
 - add_to_cart con lines_json o llamadas sucesivas
 - get_cart() → mostrar resumen completo (cliente, líneas, cantidades) y pedir confirmación; no llamar create_order en este turno
 - Tras confirmación explícita del usuario en un mensaje posterior: create_order()
@@ -93,7 +93,7 @@ Acción:
 Usuario: Busca arroz en el catálogo
 Acción:
 - Leer app://catalog/products?search=arroz (o read_catalog_products(search="arroz"))
-- Mostrar coincidencias (id, name, list_price, category)
+- Mostrar coincidencias (id, name, list_price, category, available_qty, qty_on_hand)
 - Si count>1, pedir al usuario que elija antes de add_to_cart""",
     """\
 Usuario: Quiero pedir para otro cliente pero tengo un carrito abierto
@@ -182,7 +182,8 @@ CATÁLOGO
 - Listado: app://catalog/products o read_catalog_products(); filtros: search (nombre), category_id, limit, offset.
 - Detalle: app://catalog/products/{{product_id}} o read_catalog_product(product_id).
 - Solo productos visibles en Tienda Apk (order_bridge_visible, sale_ok, active).
-- Validación: count=0 con search → sugerir otro término; varias coincidencias → listar y confirmar antes de add_to_cart.
+- Al presentar productos (listado o detalle), incluir siempre available_qty (stock disponible) y qty_on_hand (existencias).
+- Validación: count=0 con search → sugerir otro término; varias coincidencias → listar con stock y confirmar antes de add_to_cart.
 
 CARRITO Y PEDIDOS
 - El carrito se identifica con la cabecera auth-key (backend + token del usuario API).

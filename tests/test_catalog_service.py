@@ -7,7 +7,12 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.services.catalog import get_product_detail, list_categories, list_products_page
+from app.services.catalog import (
+    ProductResponse,
+    get_product_detail,
+    list_categories,
+    list_products_page,
+)
 from app.utils.exceptions import ValidationApiError
 
 SAMPLE_PRODUCT = {
@@ -22,7 +27,35 @@ SAMPLE_PRODUCT = {
         "name": "Bebidas",
         "parent_id": 1,
     },
+    "available_qty": 12.0,
+    "qty_on_hand": 15.0,
 }
+
+NORMALIZED_PRODUCT = {
+    **SAMPLE_PRODUCT,
+    "barcode": None,
+}
+
+PRODUCT_DISPLAY_FIELDS = [
+    "id",
+    "name",
+    "list_price",
+    "category",
+    "available_qty",
+    "qty_on_hand",
+]
+
+PRODUCT_DETAIL_DISPLAY_FIELDS = [
+    *PRODUCT_DISPLAY_FIELDS,
+    "default_code",
+    "uom_name",
+    "barcode",
+]
+
+
+def test_normalize_product_full_response() -> None:
+    normalized = ProductResponse().render(SAMPLE_PRODUCT)
+    assert normalized == NORMALIZED_PRODUCT
 
 
 def test_list_categories_empty() -> None:
@@ -103,8 +136,32 @@ def test_list_products_page_passthrough() -> None:
         assert result["total"] == 1
         assert result["limit"] == 80
         assert result["offset"] == 0
-        assert result["items"][0] == SAMPLE_PRODUCT
+        assert result["items"][0] == NORMALIZED_PRODUCT
         assert result["message"] is None
+        assert result["_agent"] == {
+            "next": "show_products",
+            "display": PRODUCT_DISPLAY_FIELDS,
+        }
+
+    asyncio.run(run())
+
+
+def test_list_products_page_disambiguate_agent_hint() -> None:
+    async def run() -> None:
+        odoo = AsyncMock()
+        other = {**SAMPLE_PRODUCT, "id": 8, "name": "Agua con gas"}
+        odoo.call.return_value = {
+            "items": [SAMPLE_PRODUCT, other],
+            "limit": 80,
+            "offset": 0,
+            "total": 2,
+        }
+        result = await list_products_page(odoo, search="agua")
+        assert result["total"] == 2
+        assert result["_agent"] == {
+            "next": "disambiguate",
+            "display": PRODUCT_DISPLAY_FIELDS,
+        }
 
     asyncio.run(run())
 
@@ -122,6 +179,7 @@ def test_list_products_page_no_results_message() -> None:
         assert result["items"] == []
         assert result["message"] is not None
         assert "búsqueda" in result["message"].lower()
+        assert result["_agent"] == {"next": "ask_user_for_different_criteria"}
 
     asyncio.run(run())
 
@@ -155,6 +213,10 @@ def test_get_product_detail_success() -> None:
             "api_get_product",
             product_id=7,
         )
-        assert result == SAMPLE_PRODUCT
+        assert result["id"] == 7
+        assert result["available_qty"] == 12.0
+        assert result["qty_on_hand"] == 15.0
+        assert result["barcode"] is None
+        assert result["_agent"] == {"display": PRODUCT_DETAIL_DISPLAY_FIELDS}
 
     asyncio.run(run())

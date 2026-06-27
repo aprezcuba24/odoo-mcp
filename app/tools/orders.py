@@ -8,7 +8,6 @@ from uncalled_for import Depends
 
 from app.clients.odoo_json2 import OdooJson2Client
 from app.server import get_odoo_client, mcp
-from app.services import cart_session
 from app.services.cart import cart_store, lines_payload
 from app.services.orders import create_confirmed_order
 from app.utils.app_key_codec import resolve_app_context
