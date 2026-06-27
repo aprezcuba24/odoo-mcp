@@ -4,10 +4,11 @@ frameworkVersion: "4"
 provider:
   name: aws
   runtime: python3.12
+  # region: us-east-1
   timeout: 30
   memorySize: 512
   deploymentBucket:
-    name: admin-mcp-serverless-deployments-us-east-1
+    name: admin-mcp-serverless-deployments-${sls:stage}
   environment:
     ADMIN_API_TIMEOUT: "30"
     CART_STORE_BACKEND: dynamodb
