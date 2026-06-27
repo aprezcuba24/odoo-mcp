@@ -34,10 +34,12 @@ def test_cart_tools_flow() -> None:
             added = await cart_tools.add_to_cart_tool(product_id=5, quantity=2.0)
             assert added["line_count"] == 1
             assert added["_agent"]["lines"] == [{"product_id": 5, "qty": 2.0}]
+            assert added["_agent"]["next"] == "show_to_user_before_create_order"
 
             fetched = await cart_tools.get_cart_tool()
             assert fetched["partner_id"] == 42
             assert fetched["line_count"] == 1
+            assert fetched["_agent"]["next"] == "show_to_user_before_create_order"
 
             cleared = await cart_tools.clear_cart_tool()
             assert cleared["partner_id"] is None
@@ -70,5 +72,6 @@ def test_add_to_cart_lines_json() -> None:
                 {"product_id": 7, "qty": 2.0},
                 {"product_id": 12, "qty": 1.0},
             ]
+            assert result["_agent"]["next"] == "show_to_user_before_create_order"
 
     asyncio.run(run())

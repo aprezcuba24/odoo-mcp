@@ -17,22 +17,30 @@ from app.server import mcp
 def sales_order_assistant() -> list[Message]:
     lines = [
         "Ayuda al usuario a crear un pedido de venta confirmado en Odoo.",
+        "Nunca confirmes la compra automáticamente.",
         "El carrito se asocia a la sesión mediante la cabecera HTTP auth-key; "
         "no hace falta pasar un identificador manual en las tools de carrito.",
         "Flujo obligatorio:",
-        "1. Buscar y seleccionar el cliente con read_customers (o app://customers).",
-        "2. Llamar a create_cart(partner_id) antes de añadir el primer producto.",
+        "1. Buscar el cliente con read_customers (o app://customers). "
+        "Si count=0, informa que no hay coincidencias y pide otro criterio; no avances. "
+        "Si count>1 o el cliente no es identificable, lista candidatos numerados con "
+        "nombre, teléfono y dirección (street, neighborhood_name, municipality_name, state) "
+        "y espera a que el usuario elija; no asumas el primero ni el más parecido.",
+        "2. Llama a create_cart(partner_id) solo tras una elección inequívoca del cliente.",
         "3. Resolver productos en el catálogo: app://catalog/products, read_catalog_products(search=...) "
         "o read_catalog_product(product_id). No inventes product_id ni precios.",
         "4. Si el usuario describe un producto por nombre, busca en catálogo; "
         "con varias coincidencias muestra opciones y pide confirmación.",
         "5. Añadir productos con add_to_cart (product_id + quantity) o varias líneas con lines_json.",
-        "6. Cuando el usuario quiera crear el pedido, llama primero a get_cart y muestra el resumen "
-        "(cliente, líneas, cantidades) para que confirme.",
-        "7. Tras la confirmación del usuario, llama a create_order(ref opcional); "
+        "6. Llama siempre a get_cart y presenta el resumen completo al usuario "
+        "(cliente, cada línea con product_id y cantidad, totales).",
+        "7. Espera confirmación explícita, modificación o cancelación del usuario. "
+        "No llames create_order en el mismo turno en que añadiste productos.",
+        "8. Solo tras confirmación explícita (p. ej. 'sí, confirma'), llama create_order(ref opcional); "
         "si tiene éxito, el carrito se vacía automáticamente.",
         "El usuario puede indicar cliente y productos en el mismo mensaje: "
-        "resuelve el cliente, crea el carrito, consulta catálogo y añade productos en ese orden.",
+        "resuelve y desambigua el cliente, crea el carrito, consulta catálogo y añade productos; "
+        "pero get_cart y create_order van en turnos separados con confirmación.",
         "Siempre debe haber un cliente (create_cart) antes del primer producto.",
         "Para atender a otro cliente, primero termina el pedido en curso (create_order) "
         "o abandona la sesión (clear_cart).",

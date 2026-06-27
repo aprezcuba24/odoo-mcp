@@ -17,6 +17,8 @@ from app.utils.app_key_codec import resolve_app_context
     description=(
         "Crea un carrito nuevo asociado a un cliente Odoo (res.partner). "
         "Obligatorio antes de añadir el primer producto. "
+        "Solo llama tras selección inequívoca del cliente: si read_customers devuelve count>1, "
+        "lista candidatos con nombre, teléfono y dirección y espera elección del usuario. "
         "El carrito se identifica con la cabecera HTTP auth-key (backend + token). "
         "Parámetro: partner_id (id del cliente). "
         "Falla si ya hay un carrito activo con otro cliente; usa create_order o clear_cart primero."
@@ -73,6 +75,8 @@ async def add_to_cart_tool(
     name="get_cart",
     description=(
         "Obtiene el carrito actual (cabecera HTTP auth-key). "
+        "Paso obligatorio de revisión antes de create_order: muestra al usuario el resumen "
+        "completo (cliente, líneas, cantidades) y espera confirmación explícita. "
         "Devuelve partner_id, partner_name, line_count, total_qty, lines y _agent."
     ),
 )

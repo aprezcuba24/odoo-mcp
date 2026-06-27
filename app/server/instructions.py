@@ -69,8 +69,9 @@ Acción:
 Usuario: Busca clientes que se llamen Deco
 Acción:
 - Leer app://customers?query=Deco (o read_customers(query="Deco"))
-- Si count=0, indicar que no hay coincidencias y sugerir otro criterio
-- Si count>1, mostrar candidatos (id, name, phone, order_bridge_registered, order_bridge_phone_validated, address)""",
+- Si count=0, indicar que no hay coincidencias y sugerir otro criterio; no llamar create_cart
+- Si count>1, listar candidatos numerados con id, name, phone y address (street, neighborhood_name, \
+municipality_name, state) y esperar a que el usuario elija; no asumir el primero ni create_cart""",
     """\
 Usuario: Busca clientes con teléfono 555
 Acción:
@@ -80,12 +81,13 @@ Acción:
     """\
 Usuario: Crea un pedido para Deco con 2 unidades del producto 7 y 1 del producto 12
 Acción:
-- read_customers(query="Deco") → elegir partner_id
-- create_cart(partner_id)
+- read_customers(query="Deco")
+- Si count>1: listar candidatos con id, name, phone y address; detenerse y esperar elección del usuario
+- Si count=1: create_cart(partner_id)
 - read_catalog_product(7) y read_catalog_product(12) para confirmar nombres (o si el usuario ya dio IDs válidos del catálogo)
 - add_to_cart con lines_json o llamadas sucesivas
-- get_cart() → mostrar resumen al usuario y pedir confirmación
-- Tras confirmación: create_order()
+- get_cart() → mostrar resumen completo (cliente, líneas, cantidades) y pedir confirmación; no llamar create_order en este turno
+- Tras confirmación explícita del usuario en un mensaje posterior: create_order()
 - Informar order.name, amount_total y que el carrito quedó vacío""",
     """\
 Usuario: Busca arroz en el catálogo
@@ -98,6 +100,18 @@ Usuario: Quiero pedir para otro cliente pero tengo un carrito abierto
 Acción:
 - Indicar que debe terminar el pedido (create_order tras get_cart y confirmación) \
 o abandonar con clear_cart antes de create_cart con otro partner_id""",
+    """\
+Usuario: Busca clientes que se llamen Juan
+Acción:
+- Leer app://customers?query=Juan (o read_customers(query="Juan"))
+- Si count>1, listar candidatos numerados con id, name, phone y address para que el usuario identifique al correcto
+- Esperar a que el usuario indique cuál es (por id, nombre completo, teléfono o dirección); no create_cart hasta tener partner_id inequívoco""",
+    """\
+Usuario: (Tras ver el resumen del carrito con get_cart) Añade también 3 unidades del producto 15
+Acción:
+- add_to_cart(product_id=15, quantity=3)
+- get_cart() → mostrar el carrito actualizado y volver a pedir confirmación
+- No llamar create_order hasta que el usuario confirme explícitamente el pedido completo""",
 ]
 
 
@@ -153,9 +167,14 @@ CLIENTES
 - query: texto libre que busca en nombre, teléfono y campos de dirección.
 - limit acotado a 20.
 - Validación de resultados:
-  - count=0 → indicar que no hay coincidencias; sugerir otro criterio.
+  - count=0 → indicar que no hay coincidencias; sugerir otro criterio (nombre más específico, teléfono, dirección). \
+No llamar create_cart.
   - count=1 → devolver id, name, phone, order_bridge_registered, order_bridge_phone_validated, address.
-  - count>1 → listar candidatos con esos campos.
+  - count>1 o cliente no identificable → listar candidatos numerados con id, name, phone y address; \
+esperar elección del usuario; no asumir el primero ni el "más parecido".
+- Al presentar candidatos, incluir dirección legible: street, neighborhood_name, municipality_name, state \
+(omitir campos vacíos).
+- Prohibido create_cart hasta tener un partner_id elegido de forma inequívoca por el usuario.
 
 CATÁLOGO
 - Modelo Odoo: product.product (api_search_products / api_get_product vía JSON-2).
@@ -167,11 +186,20 @@ CATÁLOGO
 
 CARRITO Y PEDIDOS
 - El carrito se identifica con la cabecera auth-key (backend + token del usuario API).
-- Flujo: (1) seleccionar cliente → (2) create_cart(partner_id) → (3) consultar catálogo y resolver product_id → \
-(4) add_to_cart → (5) get_cart para confirmar con el usuario → (6) create_order(ref opcional).
-- create_cart es obligatorio antes del primer producto.
-- create_order llama a sale.order.api_create_confirmed_order y vacía el carrito si tiene éxito.
-- El usuario puede indicar cliente y productos en el mismo mensaje: create_cart, luego catálogo, luego add_to_cart.
+- Flujo: (1) seleccionar cliente (desambiguar si hace falta) → (2) create_cart(partner_id) → \
+(3) consultar catálogo y resolver product_id → (4) add_to_cart → (5) get_cart y mostrar resumen al usuario → \
+(6) esperar confirmación explícita → (7) create_order(ref opcional).
+- create_cart es obligatorio antes del primer producto y solo tras selección inequívoca del cliente.
+- Siempre llama get_cart y muestra el resumen completo (cliente, líneas con product_id y cantidad, totales) \
+antes de create_order.
+- Nunca llames create_order de forma automática, aunque el usuario diga "crea el pedido" en el mismo mensaje: \
+primero construye el carrito, luego get_cart, luego espera confirmación explícita en un mensaje posterior.
+- Tras mostrar el carrito, el usuario puede añadir productos (add_to_cart), vaciar (clear_cart) o pedir cambios; \
+solo tras un "sí, confirma" (o equivalente) llama create_order.
+- create_order llama a sale.order.api_create_confirmed_order (pedido confirmado en Odoo, irreversible desde AdminMCP) \
+y vacía el carrito si tiene éxito; por eso la revisión previa con get_cart es obligatoria.
+- El usuario puede indicar cliente y productos en el mismo mensaje: resuelve y desambigua el cliente, \
+create_cart, catálogo, add_to_cart; pero get_cart y create_order van en turnos separados con confirmación.
 - Para otro cliente: terminar con create_order o abandonar con clear_cart (borra cliente y líneas).
 - add_to_cart: product_id del catálogo + quantity, o lines_json='[{{"product_id": 7, "qty": 2.0}}, ...]'.
 

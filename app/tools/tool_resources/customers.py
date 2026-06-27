@@ -18,7 +18,8 @@ from app.tools.tool_resources._common import READ_ONLY
         "Lista o busca clientes Odoo vía api_search_customers. "
         "Sin criterios devuelve hasta limit clientes. "
         "query = texto libre en nombre, teléfono y campos de dirección. "
-        "Equivalente al Resource app://customers."
+        "Si count>1, lista candidatos con nombre, teléfono y dirección y espera elección; "
+        "no auto-selecciones. Equivalente al Resource app://customers."
     ),
     annotations=READ_ONLY,
 )

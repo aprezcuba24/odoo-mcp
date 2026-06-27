@@ -32,6 +32,8 @@ def cart_response(
             "lines": lines_payload(cart.lines),
         },
     }
+    if cart.lines:
+        payload["_agent"]["next"] = "show_to_user_before_create_order"
     if message is not None:
         payload["message"] = message
     return payload

@@ -21,6 +21,19 @@ class PartnerResponse(ObjectResponse):
 
 _customer_list = ListResponse(PartnerResponse(), items_key="customers")
 
+_CUSTOMER_DISPLAY_FIELDS = ["id", "name", "phone", "address"]
+
+
+def _customer_agent_hint(count: int) -> dict[str, Any]:
+    if count == 0:
+        return {"next": "ask_user_for_different_criteria"}
+    if count > 1:
+        return {
+            "next": "disambiguate",
+            "display": _CUSTOMER_DISPLAY_FIELDS,
+        }
+    return {"next": "confirm_or_proceed"}
+
 
 async def search_customers(
     odoo: OdooJson2Client,
@@ -42,7 +55,9 @@ async def search_customers(
         else:
             message = "No hay clientes que coincidan con el criterio indicado."
 
-    return _customer_list.build(
+    result = _customer_list.build(
         partners,
         message=message,
     )
+    result["_agent"] = _customer_agent_hint(result["count"])
+    return result

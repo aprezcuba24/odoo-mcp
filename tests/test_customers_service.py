@@ -66,6 +66,18 @@ def test_search_customers_without_criteria() -> None:
         assert result["count"] == 2
         assert result["message"] is None
         assert result["customers"][0]["phone"] is None
+        assert result["_agent"] == {"next": "disambiguate", "display": ["id", "name", "phone", "address"]}
+
+    asyncio.run(run())
+
+
+def test_search_customers_single_result_agent_hint() -> None:
+    async def run() -> None:
+        odoo = AsyncMock()
+        odoo.call.return_value = [SAMPLE_PARTNER]
+        result = await search_customers(odoo, query="María")
+        assert result["count"] == 1
+        assert result["_agent"] == {"next": "confirm_or_proceed"}
 
     asyncio.run(run())
 
@@ -101,6 +113,7 @@ def test_search_customers_with_query_multiple_results() -> None:
         )
         assert result["count"] == 2
         assert result["customers"][0]["address"]["neighborhood_name"] == "Centro"
+        assert result["_agent"] == {"next": "disambiguate", "display": ["id", "name", "phone", "address"]}
 
     asyncio.run(run())
 
@@ -128,6 +141,7 @@ def test_search_customers_no_results_message() -> None:
         assert result["count"] == 0
         assert result["message"] is not None
         assert "no hay clientes" in result["message"].lower()
+        assert result["_agent"] == {"next": "ask_user_for_different_criteria"}
 
     asyncio.run(run())
 
@@ -139,5 +153,6 @@ def test_search_customers_no_results_without_criteria() -> None:
         result = await search_customers(odoo)
         assert result["count"] == 0
         assert result["message"] == "No hay contactos registrados."
+        assert result["_agent"] == {"next": "ask_user_for_different_criteria"}
 
     asyncio.run(run())
