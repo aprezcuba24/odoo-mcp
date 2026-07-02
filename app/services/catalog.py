@@ -48,6 +48,11 @@ _PRODUCT_DETAIL_DISPLAY_FIELDS = [
     "barcode",
 ]
 
+_DISAMBIGUATE_HINT = (
+    "Lista candidatos numerados con id visible; "
+    "espera elección del usuario (suele indicar el id)."
+)
+
 
 def _product_agent_hint(*, item_count: int, search_term: str | None) -> dict[str, Any]:
     if item_count == 0:
@@ -58,6 +63,7 @@ def _product_agent_hint(*, item_count: int, search_term: str | None) -> dict[str
         return {
             "next": "disambiguate",
             "display": _PRODUCT_DISPLAY_FIELDS,
+            "hint": _DISAMBIGUATE_HINT,
         }
     return {
         "next": "show_products",

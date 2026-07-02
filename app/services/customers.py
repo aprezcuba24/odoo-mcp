@@ -23,6 +23,11 @@ _customer_list = ListResponse(PartnerResponse(), items_key="customers")
 
 _CUSTOMER_DISPLAY_FIELDS = ["id", "name", "phone", "address"]
 
+_DISAMBIGUATE_HINT = (
+    "Lista candidatos numerados con id visible; "
+    "espera elección del usuario (suele indicar el id)."
+)
+
 
 def _customer_agent_hint(count: int) -> dict[str, Any]:
     if count == 0:
@@ -31,6 +36,7 @@ def _customer_agent_hint(count: int) -> dict[str, Any]:
         return {
             "next": "disambiguate",
             "display": _CUSTOMER_DISPLAY_FIELDS,
+            "hint": _DISAMBIGUATE_HINT,
         }
     return {"next": "confirm_or_proceed"}
 

@@ -17,8 +17,9 @@ from app.utils.app_key_codec import resolve_app_context
     description=(
         "Crea un carrito nuevo asociado a un cliente Odoo (res.partner). "
         "Obligatorio antes de añadir el primer producto. "
-        "Solo llama tras selección inequívoca del cliente: si read_customers devuelve count>1, "
-        "lista candidatos con nombre, teléfono y dirección y espera elección del usuario. "
+        "Solo llama tras selección inequívoca del cliente: si read_customers devuelve count>1 "
+        "o _agent.next es disambiguate, lista candidatos con id, nombre, teléfono y dirección "
+        "y espera elección del usuario (suele indicar el id). "
         "El carrito se identifica con la cabecera HTTP auth-key (backend + token). "
         "Parámetro: partner_id (id del cliente). "
         "Falla si ya hay un carrito activo con otro cliente; usa create_order o clear_cart primero."
@@ -41,7 +42,8 @@ async def create_cart_tool(
         "get_cart después. Requiere create_cart previo con un cliente. "
         "product_id debe obtenerse del catálogo (app://catalog/products, read_catalog_products "
         "o read_catalog_product); no inventes IDs. Si el usuario describe un producto por nombre, "
-        "busca primero en el catálogo y confirma si hay varias coincidencias. "
+        "busca primero en el catálogo; si hay varias coincidencias o _agent.next es disambiguate, "
+        "lista candidatos con id y stock y espera elección (suele ser por id) antes de add_to_cart. "
         "Modo simple: product_id y quantity (> 0); suma cantidad si el producto ya está. "
         "Modo múltiple: lines_json como cadena JSON "
         '[{"product_id": 7, "qty": 2.0}, {"product_id": 12, "qty": 1.0}]. '

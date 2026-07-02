@@ -7,8 +7,9 @@ CHATGPT_LEAD = (
     "Para lecturas usa Resources app:// en primer lugar; si el cliente no soporta resources/read, "
     "usa las tools read_* equivalentes. "
     "Flujo clientes: app://customers (listado) o app://customers?query=... (búsqueda) → read_customers. "
-    "Flujo pedidos: seleccionar cliente → create_cart → catálogo → "
-    "add_to_cart (muestra carrito) → confirmación → create_order."
+    "Flujo pedidos: si el usuario pide registrar una compra con carrito vacío, construye el carrito "
+    "(cliente + productos) antes de create_order; desambigua listando candidatos con id si hace falta; "
+    "confirmación explícita en turno posterior → create_order."
 )
 
 resources: list[tuple[str, str]] = [
@@ -110,6 +111,36 @@ Usuario: (Tras ver el resumen del carrito) Añade también 3 unidades del produc
 Acción:
 - add_to_cart(product_id=15, quantity=3) → mostrar la respuesta actualizada (carrito enriquecido) y volver a pedir confirmación
 - No llamar create_order hasta que el usuario confirme explícitamente el pedido completo""",
+    """\
+Usuario: Crea una orden para Deco con 2 unidades del producto 7
+Acción:
+- read_customers(query="Deco") → si count=1: create_cart(partner_id)
+- read_catalog_product(7) para confirmar nombre y stock
+- add_to_cart → mostrar resumen (cliente, líneas, amount_total) y pedir confirmación explícita
+- No llamar create_order en este turno aunque el usuario haya dicho "crea una orden"
+- No decir al usuario que no puedes registrar el pedido; construye el carrito primero""",
+    """\
+Usuario: Registra la compra
+Acción (sin cliente ni productos en el mensaje ni en contexto reciente):
+- Pedir al usuario cliente y productos concretos (cantidades incluidas)
+- No llamar create_order ni decir "no puedo registrar el pedido"
+Acción (si hay cliente y productos en contexto previo de la conversación):
+- Resolver cliente y productos desde el contexto, desambiguar si hace falta
+- create_cart + add_to_cart → mostrar resumen y pedir confirmación; no create_order en este turno""",
+    """\
+Usuario: Crea orden para Juan con 3 de arroz
+Acción:
+- read_customers(query="Juan")
+- Si count>1: listar candidatos numerados con id, name, phone y address; esperar elección (suele responder con el id, p. ej. "el 42")
+- read_catalog_products(search="arroz"); si varias coincidencias, listar con id, name, available_qty y qty_on_hand; esperar elección por id
+- create_cart(partner_id) y add_to_cart → resumen y pedir confirmación; no create_order en este turno""",
+    """\
+Usuario: Añade 2 de aceite al pedido de Deco
+Acción:
+- read_catalog_products(search="aceite")
+- Si count>1: listar candidatos numerados con id, name, list_price, available_qty y qty_on_hand; esperar que el usuario indique el id
+- Si el carrito aún no existe: read_customers(query="Deco"), create_cart, luego add_to_cart
+- Mostrar resumen y pedir confirmación antes de create_order""",
 ]
 
 
@@ -157,7 +188,8 @@ REGLAS GENERALES
 app://catalog/products → read_catalog_products; app://catalog/products/{{id}} → read_catalog_product.
 3. Cada petición requiere cabecera auth-key (backend + token).
 4. Antes de add_to_cart, resuelve product_id desde el catálogo; no inventes IDs ni precios.
-5. Si hay ambigüedad de producto, muestra candidatos y pide confirmación.
+5. Si hay ambigüedad de cliente o producto, lista los candidatos más cercanos con id visible y espera elección; \
+el usuario suele responder con el id.
 
 CLIENTES
 - Modelo Odoo: res.partner (api_search_customers en el backend).
@@ -169,9 +201,10 @@ CLIENTES
 No llamar create_cart.
   - count=1 → devolver id, name, phone, order_bridge_registered, order_bridge_phone_validated, address.
   - count>1 o cliente no identificable → listar candidatos numerados con id, name, phone y address; \
-esperar elección del usuario; no asumir el primero ni el "más parecido".
+esperar elección del usuario; no asumir el primero ni el "más parecido". El usuario suele elegir por id.
 - Al presentar candidatos, incluir dirección legible: street, neighborhood_name, municipality_name, state \
-(omitir campos vacíos).
+(omitir campos vacíos). El id debe ser visible en cada fila.
+- Aceptar elección por id, nombre completo, teléfono o dirección; priorizar id si el usuario lo indica.
 - Prohibido create_cart hasta tener un partner_id elegido de forma inequívoca por el usuario.
 
 CATÁLOGO
@@ -181,7 +214,9 @@ CATÁLOGO
 - Detalle: app://catalog/products/{{product_id}} o read_catalog_product(product_id).
 - Solo productos visibles en Tienda Apk (order_bridge_visible, sale_ok, active).
 - Al presentar productos (listado o detalle), incluir siempre available_qty (stock disponible) y qty_on_hand (existencias).
-- Validación: count=0 con search → sugerir otro término; varias coincidencias → listar con stock y confirmar antes de add_to_cart.
+- Validación: count=0 con search → sugerir otro término; varias coincidencias → listar candidatos numerados \
+con id, name, list_price, available_qty y qty_on_hand; esperar elección (suele ser por id) antes de add_to_cart.
+- Nunca inventar ni asumir un product_id ambiguo.
 
 CARRITO Y PEDIDOS
 - El carrito se identifica con la cabecera auth-key (backend + token del usuario API).
@@ -202,6 +237,13 @@ solo tras un "sí, confirma" (o equivalente) en un mensaje posterior llama creat
 y vacía el carrito si tiene éxito.
 - Para otro cliente: terminar con create_order o abandonar con clear_cart (borra cliente y líneas).
 - add_to_cart: product_id del catálogo + quantity, o lines_json='[{{"product_id": 7, "qty": 2.0}}, ...]'.
+- Intención de registrar con carrito vacío ("crea la orden", "registra la compra", "haz el pedido", etc.):
+  - Si hay cliente y productos en el mensaje o contexto: construye el carrito (desambigua si hace falta), \
+muestra resumen y pide confirmación; no llames create_order en ese turno.
+  - Si faltan cliente o productos: pídelos; no digas "no puedo registrar el pedido" ni llames create_order.
+  - Prohibido llamar create_order con carrito vacío; si create_order devuelve empty_cart o no_customer, \
+sigue las indicaciones de _agent y construye el carrito.
+  - Si cliente o producto es ambiguo, desambiguar antes de create_cart o add_to_cart; no bloquear el flujo.
 
 RECURSOS (preferidos para lecturas)
 

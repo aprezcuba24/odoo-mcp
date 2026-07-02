@@ -29,6 +29,8 @@ def test_create_order_no_customer() -> None:
 
         assert result["ok"] is False
         assert result["error"] == "no_customer"
+        assert result["_agent"]["next"] == "build_cart_from_context"
+        assert "create_cart" in result["_agent"]["hint"]
         odoo.call.assert_not_called()
 
     asyncio.run(run())
@@ -50,6 +52,8 @@ def test_create_order_empty_cart() -> None:
 
         assert result["ok"] is False
         assert result["error"] == "empty_cart"
+        assert result["_agent"]["next"] == "build_cart_from_context"
+        assert "add_to_cart" in result["_agent"]["hint"]
         odoo.call.assert_not_called()
 
     asyncio.run(run())

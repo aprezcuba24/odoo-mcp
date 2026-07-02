@@ -53,6 +53,15 @@ PRODUCT_DETAIL_DISPLAY_FIELDS = [
     "barcode",
 ]
 
+_DISAMBIGUATE_AGENT = {
+    "next": "disambiguate",
+    "display": PRODUCT_DISPLAY_FIELDS,
+    "hint": (
+        "Lista candidatos numerados con id visible; "
+        "espera elección del usuario (suele indicar el id)."
+    ),
+}
+
 
 def test_normalize_product_full_response() -> None:
     normalized = ProductResponse().render(SAMPLE_PRODUCT)
@@ -159,10 +168,7 @@ def test_list_products_page_disambiguate_agent_hint() -> None:
         }
         result = await list_products_page(odoo, search="agua")
         assert result["total"] == 2
-        assert result["_agent"] == {
-            "next": "disambiguate",
-            "display": PRODUCT_DISPLAY_FIELDS,
-        }
+        assert result["_agent"] == _DISAMBIGUATE_AGENT
 
     asyncio.run(run())
 

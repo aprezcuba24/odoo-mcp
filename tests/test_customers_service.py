@@ -7,6 +7,15 @@ from unittest.mock import AsyncMock
 
 from app.services.customers import PartnerResponse, search_customers
 
+_DISAMBIGUATE_AGENT = {
+    "next": "disambiguate",
+    "display": ["id", "name", "phone", "address"],
+    "hint": (
+        "Lista candidatos numerados con id visible; "
+        "espera elección del usuario (suele indicar el id)."
+    ),
+}
+
 SAMPLE_PARTNER = {
     "id": 42,
     "name": "María",
@@ -66,7 +75,7 @@ def test_search_customers_without_criteria() -> None:
         assert result["count"] == 2
         assert result["message"] is None
         assert result["customers"][0]["phone"] is None
-        assert result["_agent"] == {"next": "disambiguate", "display": ["id", "name", "phone", "address"]}
+        assert result["_agent"] == _DISAMBIGUATE_AGENT
 
     asyncio.run(run())
 
@@ -113,7 +122,7 @@ def test_search_customers_with_query_multiple_results() -> None:
         )
         assert result["count"] == 2
         assert result["customers"][0]["address"]["neighborhood_name"] == "Centro"
-        assert result["_agent"] == {"next": "disambiguate", "display": ["id", "name", "phone", "address"]}
+        assert result["_agent"] == _DISAMBIGUATE_AGENT
 
     asyncio.run(run())
 
