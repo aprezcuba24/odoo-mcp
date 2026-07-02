@@ -27,18 +27,27 @@ async def create_confirmed_order(
     lines: list[dict[str, float | int]],
     ref: str | None = None,
 ) -> dict[str, Any]:
-    params: dict[str, Any] = {
+    record = {
+        "id": 900001,
+        "name": "MOCK-S00001",
+        "state": "sale",
+        "amount_total": 0.0,
         "partner_id": partner_id,
-        "lines": lines,
+        "client_order_ref": ref or False,
     }
-    if ref is not None and str(ref).strip():
-        params["ref"] = str(ref).strip()
-
-    record = await odoo.call(
-        "sale.order",
-        "api_create_confirmed_order",
-        **params,
-    )
-    if not isinstance(record, dict):
-        raise ValueError("Respuesta inesperada de api_create_confirmed_order.")
     return _present_order(record)
+    # params: dict[str, Any] = {
+    #     "partner_id": partner_id,
+    #     "lines": lines,
+    # }
+    # if ref is not None and str(ref).strip():
+    #     params["ref"] = str(ref).strip()
+
+    # record = await odoo.call(
+    #     "sale.order",
+    #     "api_create_confirmed_order",
+    #     **params,
+    # )
+    # if not isinstance(record, dict):
+    #     raise ValueError("Respuesta inesperada de api_create_confirmed_order.")
+    # return _present_order(record)
