@@ -124,6 +124,27 @@ async def list_products_page(
     return result
 
 
+_CART_LINE_FIELDS = ["name", "list_price", "available_qty", "qty_on_hand"]
+
+
+async def read_products_by_ids(
+    odoo: OdooJson2Client,
+    *,
+    product_ids: list[int],
+) -> dict[int, dict[str, Any]]:
+    """Batch read product display fields for cart line enrichment."""
+    if not product_ids:
+        return {}
+    rows = await odoo.call(
+        "product.product",
+        "read",
+        ids=product_ids,
+        fields=_CART_LINE_FIELDS,
+    )
+    products = _product_renderer.render_many(rows)
+    return {int(product["id"]): product for product in products}
+
+
 async def get_product_detail(
     odoo: OdooJson2Client,
     *,

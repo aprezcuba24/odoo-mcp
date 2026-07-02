@@ -7,8 +7,8 @@ CHATGPT_LEAD = (
     "Para lecturas usa Resources app:// en primer lugar; si el cliente no soporta resources/read, "
     "usa las tools read_* equivalentes. "
     "Flujo clientes: app://customers (listado) o app://customers?query=... (búsqueda) → read_customers. "
-    "Flujo pedidos: seleccionar cliente → create_cart → catálogo (app://catalog/products) → "
-    "add_to_cart → get_cart (confirmar) → create_order."
+    "Flujo pedidos: seleccionar cliente → create_cart → catálogo → "
+    "add_to_cart (muestra carrito) → confirmación → create_order."
 )
 
 resources: list[tuple[str, str]] = [
@@ -85,8 +85,7 @@ Acción:
 - Si count>1: listar candidatos con id, name, phone y address; detenerse y esperar elección del usuario
 - Si count=1: create_cart(partner_id)
 - read_catalog_product(7) y read_catalog_product(12) para confirmar nombres y stock (available_qty, qty_on_hand)
-- add_to_cart con lines_json o llamadas sucesivas
-- get_cart() → mostrar resumen completo (cliente, líneas, cantidades) y pedir confirmación; no llamar create_order en este turno
+- add_to_cart con lines_json o llamadas sucesivas → mostrar la respuesta (cliente, líneas con nombre/precio/subtotal, amount_total) y pedir confirmación; no llamar create_order en este turno
 - Tras confirmación explícita del usuario en un mensaje posterior: create_order()
 - Informar order.name, amount_total y que el carrito quedó vacío""",
     """\
@@ -98,7 +97,7 @@ Acción:
     """\
 Usuario: Quiero pedir para otro cliente pero tengo un carrito abierto
 Acción:
-- Indicar que debe terminar el pedido (create_order tras get_cart y confirmación) \
+- Indicar que debe terminar el pedido (create_order tras confirmación) \
 o abandonar con clear_cart antes de create_cart con otro partner_id""",
     """\
 Usuario: Busca clientes que se llamen Juan
@@ -107,10 +106,9 @@ Acción:
 - Si count>1, listar candidatos numerados con id, name, phone y address para que el usuario identifique al correcto
 - Esperar a que el usuario indique cuál es (por id, nombre completo, teléfono o dirección); no create_cart hasta tener partner_id inequívoco""",
     """\
-Usuario: (Tras ver el resumen del carrito con get_cart) Añade también 3 unidades del producto 15
+Usuario: (Tras ver el resumen del carrito) Añade también 3 unidades del producto 15
 Acción:
-- add_to_cart(product_id=15, quantity=3)
-- get_cart() → mostrar el carrito actualizado y volver a pedir confirmación
+- add_to_cart(product_id=15, quantity=3) → mostrar la respuesta actualizada (carrito enriquecido) y volver a pedir confirmación
 - No llamar create_order hasta que el usuario confirme explícitamente el pedido completo""",
 ]
 
@@ -187,20 +185,21 @@ CATÁLOGO
 
 CARRITO Y PEDIDOS
 - El carrito se identifica con la cabecera auth-key (backend + token del usuario API).
-- Flujo: (1) seleccionar cliente (desambiguar si hace falta) → (2) create_cart(partner_id) → \
-(3) consultar catálogo y resolver product_id → (4) add_to_cart → (5) get_cart y mostrar resumen al usuario → \
-(6) esperar confirmación explícita → (7) create_order(ref opcional).
+- Flujo en dos pasos para el usuario:
+  1. Construir carrito (un turno): el usuario puede indicar cliente y productos en el mismo mensaje; \
+resuelve y desambigua el cliente, consulta catálogo, create_cart(partner_id) y add_to_cart; \
+muestra al usuario la respuesta de add_to_cart (cliente, líneas con nombre/precio/subtotal, amount_total) \
+y pide confirmación. No llames create_order en este turno.
+  2. Confirmar pedido (otro turno): solo tras confirmación explícita del usuario, create_order(ref opcional).
 - create_cart es obligatorio antes del primer producto y solo tras selección inequívoca del cliente.
-- Siempre llama get_cart y muestra el resumen completo (cliente, líneas con product_id y cantidad, totales) \
-antes de create_order.
+- add_to_cart devuelve el carrito completo enriquecido; úsalo como resumen de revisión sin llamar get_cart después.
+- get_cart es opcional: solo si necesitas refrescar el estado sin añadir productos.
 - Nunca llames create_order de forma automática, aunque el usuario diga "crea el pedido" en el mismo mensaje: \
-primero construye el carrito, luego get_cart, luego espera confirmación explícita en un mensaje posterior.
+primero construye el carrito con add_to_cart, muestra el resumen y espera confirmación explícita en un mensaje posterior.
 - Tras mostrar el carrito, el usuario puede añadir productos (add_to_cart), vaciar (clear_cart) o pedir cambios; \
-solo tras un "sí, confirma" (o equivalente) llama create_order.
+solo tras un "sí, confirma" (o equivalente) en un mensaje posterior llama create_order.
 - create_order llama a sale.order.api_create_confirmed_order (pedido confirmado en Odoo, irreversible desde AdminMCP) \
-y vacía el carrito si tiene éxito; por eso la revisión previa con get_cart es obligatoria.
-- El usuario puede indicar cliente y productos en el mismo mensaje: resuelve y desambigua el cliente, \
-create_cart, catálogo, add_to_cart; pero get_cart y create_order van en turnos separados con confirmación.
+y vacía el carrito si tiene éxito.
 - Para otro cliente: terminar con create_order o abandonar con clear_cart (borra cliente y líneas).
 - add_to_cart: product_id del catálogo + quantity, o lines_json='[{{"product_id": 7, "qty": 2.0}}, ...]'.
 

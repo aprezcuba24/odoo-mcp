@@ -12,6 +12,7 @@ from app.services.catalog import (
     get_product_detail,
     list_categories,
     list_products_page,
+    read_products_by_ids,
 )
 from app.utils.exceptions import ValidationApiError
 
@@ -180,6 +181,33 @@ def test_list_products_page_no_results_message() -> None:
         assert result["message"] is not None
         assert "búsqueda" in result["message"].lower()
         assert result["_agent"] == {"next": "ask_user_for_different_criteria"}
+
+    asyncio.run(run())
+
+
+def test_read_products_by_ids_empty() -> None:
+    async def run() -> None:
+        odoo = AsyncMock()
+        result = await read_products_by_ids(odoo, product_ids=[])
+        assert result == {}
+        odoo.call.assert_not_awaited()
+
+    asyncio.run(run())
+
+
+def test_read_products_by_ids_success() -> None:
+    async def run() -> None:
+        odoo = AsyncMock()
+        odoo.call.return_value = [SAMPLE_PRODUCT]
+        result = await read_products_by_ids(odoo, product_ids=[7])
+        odoo.call.assert_awaited_once_with(
+            "product.product",
+            "read",
+            ids=[7],
+            fields=["name", "list_price", "available_qty", "qty_on_hand"],
+        )
+        assert result[7]["name"] == "Agua mineral"
+        assert result[7]["list_price"] == 0.8
 
     asyncio.run(run())
 

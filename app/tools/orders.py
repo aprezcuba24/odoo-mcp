@@ -18,9 +18,9 @@ from app.utils.app_key_codec import resolve_app_context
     description=(
         "Crea un pedido de venta confirmado en Odoo desde el carrito actual "
         "(sale.order.api_create_confirmed_order). "
-        "Obligatorio: antes de llamar a esta tool, muestra al usuario el resumen con get_cart "
-        "y espera su confirmación explícita. Nunca llames create_order automáticamente "
-        "ni en el mismo turno en que añadiste productos. "
+        "Obligatorio: antes de llamar a esta tool, muestra al usuario el resumen devuelto por "
+        "add_to_cart y espera su confirmación explícita en un mensaje posterior. "
+        "Nunca llames create_order automáticamente ni en el mismo turno en que añadiste productos. "
         "Parámetro opcional: ref (referencia del cliente, client_order_ref). "
         "Si el pedido se crea correctamente, vacía el carrito. "
         "Si no hay cliente: ok=false, error=no_customer. "

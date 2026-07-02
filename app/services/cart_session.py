@@ -7,7 +7,8 @@ from typing import Any
 
 from app.clients.odoo_json2 import OdooJson2Client
 from app.services.cart import cart_store, cart_response
-from app.services.cart.base import CartStoreKey, empty_admin_cart
+from app.services.cart.base import AdminCart, CartStoreKey, empty_admin_cart
+from app.services.catalog import read_products_by_ids
 
 
 async def _fetch_partner_name(odoo: OdooJson2Client, partner_id: int) -> str:
@@ -20,6 +21,19 @@ async def _fetch_partner_name(odoo: OdooJson2Client, partner_id: int) -> str:
     if not partners:
         raise ValueError(f"No existe un cliente con id={partner_id}.")
     return str(partners[0].get("name") or "")
+
+
+async def _cart_response(
+    cart: AdminCart,
+    odoo: OdooJson2Client,
+    *,
+    message: str | None = None,
+) -> dict[str, Any]:
+    products_by_id: dict[int, dict[str, Any]] = {}
+    if cart.lines:
+        product_ids = [line.product_id for line in cart.lines]
+        products_by_id = await read_products_by_ids(odoo, product_ids=product_ids)
+    return cart_response(cart, products_by_id=products_by_id, message=message)
 
 
 async def create_cart_session(
@@ -42,12 +56,13 @@ async def create_cart_session(
 
 async def add_to_cart(
     key: CartStoreKey,
+    odoo: OdooJson2Client,
     *,
     product_id: int,
     quantity: float,
 ) -> dict[str, Any]:
     cart = await cart_store.add_lines(key, [(product_id, quantity)])
-    return cart_response(cart, message="Producto añadido al carrito.")
+    return await _cart_response(cart, odoo, message="Producto añadido al carrito.")
 
 
 def _parse_lines_json(lines_json: str) -> list[tuple[int, float]]:
@@ -77,20 +92,22 @@ def _parse_lines_json(lines_json: str) -> list[tuple[int, float]]:
 
 async def add_to_cart_lines(
     key: CartStoreKey,
+    odoo: OdooJson2Client,
     *,
     lines_json: str,
 ) -> dict[str, Any]:
     lines = _parse_lines_json(lines_json)
     cart = await cart_store.add_lines(key, lines)
-    return cart_response(
+    return await _cart_response(
         cart,
+        odoo,
         message=f"{len(lines)} línea(s) añadida(s) al carrito.",
     )
 
 
-async def get_cart(key: CartStoreKey) -> dict[str, Any]:
+async def get_cart(key: CartStoreKey, odoo: OdooJson2Client) -> dict[str, Any]:
     cart = await cart_store.get_cart(key)
-    return cart_response(cart)
+    return await _cart_response(cart, odoo)
 
 
 async def clear_cart(key: CartStoreKey) -> dict[str, Any]:
