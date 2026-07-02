@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from app.clients.odoo_json2 import OdooJson2Client
+from app.utils.exceptions import ValidationApiError
 from app.utils.object_response import ListResponse, Normalizer, ObjectResponse
 
 DEFAULT_LIMIT = 80
@@ -124,7 +126,19 @@ async def list_products_page(
     return result
 
 
-_CART_LINE_FIELDS = ["name", "list_price", "available_qty", "qty_on_hand"]
+async def _fetch_product_for_cart(
+    odoo: OdooJson2Client,
+    product_id: int,
+) -> dict[str, Any] | None:
+    try:
+        raw = await odoo.call(
+            "product.product",
+            "api_get_product",
+            product_id=product_id,
+        )
+    except ValidationApiError:
+        return None
+    return _product_renderer.render(raw)
 
 
 async def read_products_by_ids(
@@ -135,14 +149,14 @@ async def read_products_by_ids(
     """Batch read product display fields for cart line enrichment."""
     if not product_ids:
         return {}
-    rows = await odoo.call(
-        "product.product",
-        "read",
-        ids=product_ids,
-        fields=_CART_LINE_FIELDS,
+    products = await asyncio.gather(
+        *(_fetch_product_for_cart(odoo, product_id) for product_id in product_ids)
     )
-    products = _product_renderer.render_many(rows)
-    return {int(product["id"]): product for product in products}
+    return {
+        int(product["id"]): product
+        for product in products
+        if product is not None
+    }
 
 
 async def get_product_detail(

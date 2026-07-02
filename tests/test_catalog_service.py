@@ -198,16 +198,17 @@ def test_read_products_by_ids_empty() -> None:
 def test_read_products_by_ids_success() -> None:
     async def run() -> None:
         odoo = AsyncMock()
-        odoo.call.return_value = [SAMPLE_PRODUCT]
+        odoo.call.return_value = SAMPLE_PRODUCT
         result = await read_products_by_ids(odoo, product_ids=[7])
         odoo.call.assert_awaited_once_with(
             "product.product",
-            "read",
-            ids=[7],
-            fields=["name", "list_price", "available_qty", "qty_on_hand"],
+            "api_get_product",
+            product_id=7,
         )
         assert result[7]["name"] == "Agua mineral"
         assert result[7]["list_price"] == 0.8
+        assert result[7]["available_qty"] == 12.0
+        assert result[7]["qty_on_hand"] == 15.0
 
     asyncio.run(run())
 

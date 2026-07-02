@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, patch
 
 from app.services.cart.memory import InMemoryCartStore
 from app.utils.app_key_codec import app_context_from_encoded, encode_app_key
+from app.utils.exceptions import ValidationApiError
 
 _CTX = app_context_from_encoded(
     encode_app_key("http://localhost:8069", "test-admin-key"),
@@ -41,9 +42,12 @@ SAMPLE_PRODUCTS = [
 def _odoo_call_side_effect(model: str, method: str, **kwargs: Any) -> Any:
     if model == "res.partner" and method == "read":
         return [{"name": "Deco Addict"}]
-    if model == "product.product" and method == "read":
-        ids = kwargs.get("ids", [])
-        return [p for p in SAMPLE_PRODUCTS if p["id"] in ids]
+    if model == "product.product" and method == "api_get_product":
+        product_id = kwargs.get("product_id")
+        matches = [p for p in SAMPLE_PRODUCTS if p["id"] == product_id]
+        if not matches:
+            raise ValidationApiError("Producto no disponible.", status_code=422)
+        return matches[0]
     raise AssertionError(f"Unexpected Odoo call: {model}.{method} {kwargs}")
 
 
@@ -110,7 +114,11 @@ def test_add_to_cart_lines_json() -> None:
             side_effect=lambda model, method, **kwargs: (
                 [{"name": "Cliente"}]
                 if model == "res.partner"
-                else [p for p in SAMPLE_PRODUCTS if p["id"] in kwargs.get("ids", [])]
+                else next(
+                    p
+                    for p in SAMPLE_PRODUCTS
+                    if p["id"] == kwargs.get("product_id")
+                )
             )
         )
 
@@ -134,19 +142,21 @@ def test_add_to_cart_lines_json() -> None:
     asyncio.run(run())
 
 
+def _odoo_call_unknown_product_side_effect(model: str, method: str, **kwargs: Any) -> Any:
+    if model == "res.partner" and method == "read":
+        return [{"name": "Cliente"}]
+    if model == "product.product" and method == "api_get_product":
+        raise ValidationApiError("Producto no disponible.", status_code=422)
+    raise AssertionError(f"Unexpected Odoo call: {model}.{method} {kwargs}")
+
+
 def test_add_to_cart_unknown_product_keeps_basic_line() -> None:
     from app.tools import cart as cart_tools
 
     async def run() -> None:
         store = InMemoryCartStore()
         odoo = AsyncMock()
-        odoo.call = AsyncMock(
-            side_effect=lambda model, method, **kwargs: (
-                [{"name": "Cliente"}]
-                if model == "res.partner"
-                else []
-            )
-        )
+        odoo.call = AsyncMock(side_effect=_odoo_call_unknown_product_side_effect)
 
         with (
             patch("app.tools.cart.resolve_app_context", return_value=_CTX),
